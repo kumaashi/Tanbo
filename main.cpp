@@ -322,6 +322,35 @@ create_swapchain(VkDevice device, VkSurfaceKHR surface, uint32_t width, uint32_t
 	return ret;
 }
 
+static void
+submit_command(VkDevice device, VkCommandBuffer cmdbuf, VkQueue queue, VkFence fence, VkSemaphore sem)
+{
+	VkSubmitInfo submit_info = {};
+	VkPipelineStageFlags wait_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSemaphore waitSemaphores[] = { sem };
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitDstStageMask = wait_mask;
+	submit_info.commandBufferCount = 1;
+	submit_info.pWaitSemaphores = waitSemaphores;
+	submit_info.pCommandBuffers = &cmdbuf;
+	submit_info.signalSemaphoreCount = 0;
+
+	vkResetFences(device, 1, &fence);
+	vkQueueSubmit(queue, 1, &submit_info, fence);
+}
+
+static void
+present_surface(VkQueue queue, VkSwapchainKHR swapchain, uint32_t present_index)
+{
+	VkPresentInfoKHR info = {};
+
+	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	info.pSwapchains = &swapchain;
+	info.swapchainCount = 1;
+	info.pImageIndices = &present_index;
+	vkQueuePresentKHR(queue, &info);
+}
 
 int main(int argc, char *argv[]) {
 	const char *appname = argv[0];
@@ -336,13 +365,13 @@ int main(int argc, char *argv[]) {
 		VkSemaphore sem = VK_NULL_HANDLE;
 		VkCommandBuffer cmdbuf = VK_NULL_HANDLE;
 	} frame_info[FrameFifoMax];
-	auto hwnd = InitWindow("Tanbo", Width, Height);
-	auto inst = create_instance(appname);
+
 	uint32_t gpu_count = 0;
 	uint32_t queue_family_count = 0;
 	uint32_t graphics_queue_family_index = -1;
-
-	VkPhysicalDevice gpudev = VK_NULL_HANDLE;
+	static auto hwnd = InitWindow("Tanbo", Width, Height);
+	static auto inst = create_instance(appname);
+	static VkPhysicalDevice gpudev = VK_NULL_HANDLE;
 	auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
 	err = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpudev);
 	VkPhysicalDeviceProperties gpu_props = {};
@@ -358,11 +387,10 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 	}
-	auto device = create_device(gpudev, graphics_queue_family_index);
+	static auto device = create_device(gpudev, graphics_queue_family_index);
 	static VkSurfaceKHR surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
 	static VkSwapchainKHR swapchain = create_swapchain(device, surface, Width, Height, FrameFifoMax);
-	
-	VkQueue graphics_queue = VK_NULL_HANDLE;
+	static VkQueue graphics_queue = VK_NULL_HANDLE;
 	vkGetDeviceQueue(device, graphics_queue_family_index, 0, &graphics_queue);
 
 	VkCommandPool cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
@@ -381,6 +409,8 @@ int main(int argc, char *argv[]) {
 			ref.sem = create_semaphore(device);
 		}
 	}
+	static auto devmem_host = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, true);
+	static auto devmem_local = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, false);
 	printf("inst=%p\n", inst);
 	printf("gpudev=%p\n", gpudev);
 	printf("minTexelBufferOffsetAlignment  =%p\n", (void *)gpu_props.limits.minTexelBufferOffsetAlignment);
@@ -394,6 +424,8 @@ int main(int argc, char *argv[]) {
 	printf("swapchain=%p\n", swapchain);
 	printf("graphics_queue=%p\n", graphics_queue);
 	printf("cmd_pool=%p\n", cmd_pool);
+	printf("devmem_host=%p\n", devmem_host);
+	printf("devmem_local=%p\n", devmem_local);
 	for(int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
 		printf("ref.image=%p\n", ref.image);
@@ -402,6 +434,7 @@ int main(int argc, char *argv[]) {
 		printf("ref.sem=%p\n", ref.sem);
 	}
 
+	
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
 	while(Update()) {
@@ -420,34 +453,14 @@ int main(int argc, char *argv[]) {
 			
 		}
 		vkEndCommandBuffer(ref.cmdbuf);
-		
-		//Submit and Present
-		VkSubmitInfo submit_info = {};
-		VkPipelineStageFlags wait_mask[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSemaphore waitSemaphores[] = { ref.sem };
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = waitSemaphores;
-		submit_info.pWaitDstStageMask = wait_mask;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &ref.cmdbuf;
-		submit_info.signalSemaphoreCount = 0;
+		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
+		present_surface(graphics_queue, swapchain, present_index);
 
-		vkResetFences(device, 1, &ref.fence);
-		vkQueueSubmit(graphics_queue, 1, &submit_info, ref.fence);
-
-		VkPresentInfoKHR present_info = {};
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present_info.waitSemaphoreCount = 0;
-		present_info.swapchainCount = 1;
-		present_info.pSwapchains = &swapchain;
-		present_info.pImageIndices = &present_index;
-
-		vkQueuePresentKHR(graphics_queue, &present_info);
 		backbuffer_index = frame_count % FrameFifoMax;
 		frame_count++;
 		Sleep(0);
-		printf("frame_count=%lld\n", frame_count);
+		if((frame_count % 60) == 0)
+			printf("frame_count=%lld\n", frame_count);
 	}
 }
 
