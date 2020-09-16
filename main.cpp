@@ -375,7 +375,6 @@ int main(int argc, char *argv[]) {
 	auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
 	err = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpudev);
 	VkPhysicalDeviceProperties gpu_props = {};
-
 	vkGetPhysicalDeviceProperties(gpudev, &gpu_props);
 	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &queue_family_count, nullptr);
 	std::vector<VkQueueFamilyProperties> vqueue_props(queue_family_count);
@@ -388,29 +387,43 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	static auto device = create_device(gpudev, graphics_queue_family_index);
-	static VkSurfaceKHR surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
-	static VkSwapchainKHR swapchain = create_swapchain(device, surface, Width, Height, FrameFifoMax);
+	static auto surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
+	static auto swapchain = create_swapchain(device, surface, Width, Height, FrameFifoMax);
+	static auto cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 	static VkQueue graphics_queue = VK_NULL_HANDLE;
 	vkGetDeviceQueue(device, graphics_queue_family_index, 0, &graphics_queue);
-
-	VkCommandPool cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
-	{
-		uint32_t count = 0;
-		std::vector<VkImage> temp;
-		vkGetSwapchainImagesKHR(device, swapchain, &count, nullptr);
-		temp.resize(count);
-		printf("count=%d\n", count);
-		vkGetSwapchainImagesKHR(device, swapchain, &count, temp.data());
-		for(int i = 0 ; i < count; i++) {
-			auto & ref = frame_info[i];
-			ref.image = temp[i];
-			ref.cmdbuf = create_command_buffer(device, cmd_pool);
-			ref.fence = create_fence(device);
-			ref.sem = create_semaphore(device);
-		}
-	}
+	uint32_t swapchain_count = 0;
+	std::vector<VkImage> temp;
+	vkGetSwapchainImagesKHR(device, swapchain, &swapchain_count, nullptr);
+	temp.resize(swapchain_count);
+	vkGetSwapchainImagesKHR(device, swapchain, &swapchain_count, temp.data());
 	static auto devmem_host = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, true);
 	static auto devmem_local = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, false);
+
+	for(int i = 0 ; i < FrameFifoMax; i++) {
+		auto & ref = frame_info[i];
+		ref.image = temp[i];
+		ref.cmdbuf = create_command_buffer(device, cmd_pool);
+		ref.fence = create_fence(device);
+		ref.sem = create_semaphore(device);
+		//added command
+		vkResetCommandBuffer(ref.cmdbuf, 0);
+		VkCommandBufferBeginInfo cmdbegininfo = {};
+		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		vkBeginCommandBuffer(ref.cmdbuf, &cmdbegininfo);
+		{
+			
+		}
+		vkEndCommandBuffer(ref.cmdbuf);
+		printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
+		printf("frame=%d\n", i);
+		printf("ref.image=%p\n", ref.image);
+		printf("ref.cmdbuf=%p\n", ref.cmdbuf);
+		printf("ref.fence=%p\n", ref.fence);
+		printf("ref.sem=%p\n", ref.sem);
+	}
+	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	printf("inst=%p\n", inst);
 	printf("gpudev=%p\n", gpudev);
 	printf("minTexelBufferOffsetAlignment  =%p\n", (void *)gpu_props.limits.minTexelBufferOffsetAlignment);
@@ -426,15 +439,7 @@ int main(int argc, char *argv[]) {
 	printf("cmd_pool=%p\n", cmd_pool);
 	printf("devmem_host=%p\n", devmem_host);
 	printf("devmem_local=%p\n", devmem_local);
-	for(int i = 0 ; i < FrameFifoMax; i++) {
-		auto & ref = frame_info[i];
-		printf("ref.image=%p\n", ref.image);
-		printf("ref.cmdbuf=%p\n", ref.cmdbuf);
-		printf("ref.fence=%p\n", ref.fence);
-		printf("ref.sem=%p\n", ref.sem);
-	}
 
-	
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
 	while(Update()) {
@@ -443,19 +448,8 @@ int main(int argc, char *argv[]) {
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
 		vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
-		VkCommandBufferBeginInfo cmdbegininfo = {};
-		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-		vkResetCommandBuffer(ref.cmdbuf, 0);
-		vkBeginCommandBuffer(ref.cmdbuf, &cmdbegininfo);
-		{
-			
-		}
-		vkEndCommandBuffer(ref.cmdbuf);
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
-
 		backbuffer_index = frame_count % FrameFifoMax;
 		frame_count++;
 		Sleep(0);
