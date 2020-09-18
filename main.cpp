@@ -161,7 +161,6 @@ create_device(VkPhysicalDevice gpudev, uint32_t graphics_queue_family_index)
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	device_info.queueCreateInfoCount = 1;
 	device_info.pQueueCreateInfos = &queue_info;
-	device_info.enabledLayerCount = 1;
 	device_info.enabledExtensionCount = (uint32_t)_countof(ext_names);
 	device_info.ppEnabledExtensionNames = ext_names;
 	auto err = vkCreateDevice(gpudev, &device_info, NULL, &ret);
@@ -352,6 +351,55 @@ present_surface(VkQueue queue, VkSwapchainKHR swapchain, uint32_t present_index)
 	vkQueuePresentKHR(queue, &info);
 }
 
+[[ nodiscard ]]
+static void
+set_image_memory_barrier(
+	VkCommandBuffer cmdbuf,
+	VkImage image,
+	VkImageAspectFlags aspectMask,
+	VkImageLayout old_image_layout,
+	VkImageLayout new_image_layout,
+	uint32_t baseMipLevel = 0,
+	uint32_t levelCount = 1,
+	uint32_t baseArrayLayer = 0,
+	uint32_t layerCount = 1)
+{
+	VkImageMemoryBarrier ret = {};
+
+	ret.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	ret.image = image;
+	ret.oldLayout = old_image_layout;
+	ret.newLayout = new_image_layout;
+	ret.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	ret.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	ret.subresourceRange = { aspectMask, baseMipLevel, levelCount, baseArrayLayer, layerCount };
+	vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &ret);
+}
+
+[[ nodiscard ]]
+static VkBuffer
+create_buffer(
+	VkDevice device,
+	VkDeviceSize size,
+	VkBufferCreateInfo *pinfo = nullptr)
+{
+	VkBuffer ret = VK_NULL_HANDLE;
+	VkBufferCreateInfo info = {};
+
+	info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	info.size  = size;
+	info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	vkCreateBuffer(device, &info, nullptr, &ret);
+	if (ret && pinfo)
+		*pinfo = info;
+
+	return (ret);
+}
+
 int main(int argc, char *argv[]) {
 	const char *appname = argv[0];
 	enum {
@@ -359,11 +407,18 @@ int main(int argc, char *argv[]) {
 		Height = 480,
 		FrameFifoMax = 2,
 	};
+
 	struct frame_info_t {
+		enum {
+			LayerMax = 4,
+		};
 		VkImage image = VK_NULL_HANDLE;
 		VkFence fence = VK_NULL_HANDLE;
 		VkSemaphore sem = VK_NULL_HANDLE;
 		VkCommandBuffer cmdbuf = VK_NULL_HANDLE;
+		VkDeviceMemory devmem_host = VK_NULL_HANDLE;
+		VkDeviceMemory devmem_local = VK_NULL_HANDLE;
+		VkImage image_layer[LayerMax];
 	} frame_info[FrameFifoMax];
 
 	uint32_t gpu_count = 0;
@@ -387,9 +442,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	static auto device = create_device(gpudev, graphics_queue_family_index);
+	static auto cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 	static auto surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
 	static auto swapchain = create_swapchain(device, surface, Width, Height, FrameFifoMax);
-	static auto cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 	static VkQueue graphics_queue = VK_NULL_HANDLE;
 	vkGetDeviceQueue(device, graphics_queue_family_index, 0, &graphics_queue);
 	uint32_t swapchain_count = 0;
@@ -397,24 +452,34 @@ int main(int argc, char *argv[]) {
 	vkGetSwapchainImagesKHR(device, swapchain, &swapchain_count, nullptr);
 	temp.resize(swapchain_count);
 	vkGetSwapchainImagesKHR(device, swapchain, &swapchain_count, temp.data());
-	static auto devmem_host = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, true);
-	static auto devmem_local = alloc_device_memory(gpudev, device, 1024 * 1024 * 1024, false);
-
+	enum {
+		GpuMemoryMax = 1024 * 1024 * 1024,
+	};
 	for(int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
-		ref.image = temp[i];
 		ref.cmdbuf = create_command_buffer(device, cmd_pool);
 		ref.fence = create_fence(device);
 		ref.sem = create_semaphore(device);
+		ref.devmem_host = alloc_device_memory(gpudev, device, GpuMemoryMax, true);
+		ref.devmem_local = alloc_device_memory(gpudev, device, GpuMemoryMax, false);
+		
 		//added command
 		vkResetCommandBuffer(ref.cmdbuf, 0);
 		VkCommandBufferBeginInfo cmdbegininfo = {};
 		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		vkBeginCommandBuffer(ref.cmdbuf, &cmdbegininfo);
-		{
-			
-		}
+		
+		ref.image = temp[i];
+		set_image_memory_barrier(ref.cmdbuf, ref.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+		VkClearColorValue clearColor = {};
+		clearColor.float32[0] = !i;
+		clearColor.float32[1] = !!i;
+		clearColor.float32[2] = !i;
+		clearColor.float32[3] = !!i;
+		VkImageSubresourceRange image_range_color = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+		vkCmdClearColorImage(ref.cmdbuf, ref.image, VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &image_range_color);
+		set_image_memory_barrier(ref.cmdbuf, ref.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		vkEndCommandBuffer(ref.cmdbuf);
 		printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 		printf("frame=%d\n", i);
@@ -422,6 +487,8 @@ int main(int argc, char *argv[]) {
 		printf("ref.cmdbuf=%p\n", ref.cmdbuf);
 		printf("ref.fence=%p\n", ref.fence);
 		printf("ref.sem=%p\n", ref.sem);
+		printf("ref.devmem_host=%p\n", ref.devmem_host);
+		printf("ref.devmem_local=%p\n", ref.devmem_local);
 	}
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	printf("inst=%p\n", inst);
@@ -437,8 +504,7 @@ int main(int argc, char *argv[]) {
 	printf("swapchain=%p\n", swapchain);
 	printf("graphics_queue=%p\n", graphics_queue);
 	printf("cmd_pool=%p\n", cmd_pool);
-	printf("devmem_host=%p\n", devmem_host);
-	printf("devmem_local=%p\n", devmem_local);
+	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
@@ -457,4 +523,3 @@ int main(int argc, char *argv[]) {
 			printf("frame_count=%lld\n", frame_count);
 	}
 }
-
