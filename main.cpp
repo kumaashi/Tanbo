@@ -1043,15 +1043,15 @@ main(int argc, char *argv[])
 	};
 
 	enum {
-		ScreenWidth = 1280,
-		ScreenHeight = 960,
-		Width = 640,
-		Height = 480,
+		ScreenWidth = 1024,
+		ScreenHeight = 768,
+		Width = 320,
+		Height = 240,
 		BitsSize = 4,
 		ImageSize = Width * Width * BitsSize,
 		FrameFifoMax = 2,
-		ObjectMax = 256,
-		LayerMax = 8,
+		ObjectMax = 1024,
+		LayerMax = 2,
 		GpuMemoryMax = ImageSize * LayerMax * 4,
 		DescriptorArrayMax = 32,
 		ObjectMaxBytes = ObjectMax * sizeof(ObjectFormat),
