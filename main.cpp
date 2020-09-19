@@ -182,49 +182,6 @@ Update()
 	return is_active;
 }
 
-static VKAPI_ATTR VkBool32
-VKAPI_CALL vk_callback_printf(
-	VkDebugReportFlagsEXT flags,
-	VkDebugReportObjectTypeEXT,
-	uint64_t object,
-	size_t location,
-	int32_t messageCode,
-	const char* pLayerPrefix,
-	const char* pMessage,
-	void* pUserData)
-{
-	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-		printf("\n\nvkdbg: ERROR : ");
-	if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-		printf("\n\nvkdbg: WARNING : ");
-	if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-		printf("\n\nvkdbg: PERFORMANCE : ");
-	if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-		printf("INFO : ");
-	if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-		printf("DEBUG : ");
-	printf("%s", pMessage);
-	printf("\n");
-	return VK_FALSE;
-}
-
-VkDebugReportCallbackEXT
-bind_debug_fn(
-	VkInstance instance,
-	VkDebugReportCallbackCreateInfoEXT ext)
-{
-	VkDebugReportCallbackEXT callback = NULL;
-	auto cb = PFN_vkCreateDebugReportCallbackEXT(
-			vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
-
-	if (cb)
-		cb(instance, &ext, nullptr, &callback);
-	else
-		printf("PFN_vkCreateDebugReportCallbackEXT IS NULL\n");
-	return callback;
-}
-
-
 [[ nodiscard ]] static VkInstance
 create_instance(const char *appname) {
 	const char *vinstance_ext_names[] = {
@@ -237,10 +194,8 @@ create_instance(const char *appname) {
 	VkInstance inst = VK_NULL_HANDLE;
 	VkApplicationInfo vkapp = {};
 	VkInstanceCreateInfo inst_info = {};
-	VkDebugReportCallbackCreateInfoEXT drcc_info = {};
 
 	vkapp.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	vkapp.pNext = &drcc_info;
 	vkapp.pApplicationName = appname;
 	vkapp.pEngineName = appname;
 	vkapp.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
@@ -251,25 +206,7 @@ create_instance(const char *appname) {
 	inst_info.enabledExtensionCount = (uint32_t)_countof(vinstance_ext_names);
 	inst_info.ppEnabledExtensionNames = vinstance_ext_names;
 
-	static const char *debuglayers[] = {
-		"VK_LAYER_KHRONOS_validation",
-	};
-	inst_info.enabledLayerCount = _countof(debuglayers);
-	inst_info.ppEnabledLayerNames = debuglayers;
-
-	drcc_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-	drcc_info.flags = 0;
-	drcc_info.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-	drcc_info.pfnCallback = &vk_callback_printf;
-	
 	auto err = vkCreateInstance(&inst_info, NULL, &inst);
-	
-	bind_debug_fn(inst, drcc_info);
-
 	return inst;
 }
 
@@ -1258,50 +1195,7 @@ main(int argc, char *argv[])
 		cmd_clear_image(ref.cmdbuf, ref.backbuffer_image, !i, !!i, !i, 1);
 		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		vkEndCommandBuffer(ref.cmdbuf);
-		printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
-		printf("frame=%d\n", i);
-		printf("ref.image=0x%p\n", ref.backbuffer_image);
-		printf("ref.cmdbuf=0x%p\n", ref.cmdbuf);
-		printf("ref.fence=0x%p\n", ref.fence);
-		printf("ref.sem=0x%p\n", ref.sem);
-		printf("ref.devmem_host=0x%p\n", ref.devmem_host);
-		for(int index = 0 ; auto & layer : ref.layer) {
-			//descset
-			printf("layer%d:layer.descriptor_set_srv = 0x%p\n", index, layer.descriptor_set_srv);
-			printf("layer%d:layer.descriptor_set_cbv = 0x%p\n", index, layer.descriptor_set_cbv);
-			printf("layer%d:layer.descriptor_set_uav = 0x%p\n", index, layer.descriptor_set_uav);
-
-			printf("layer%d:layer.image = 0x%p\n", index, layer.image);
-			printf("layer%d:layer.buffer = 0x%p\n", index, layer.buffer);
-			printf("layer%d:layer.vertex_buffer = 0x%p\n", index, layer.vertex_buffer);
-			printf("layer%d:layer.host_memory_addr = 0x%p\n", index, layer.host_memory_addr);
-			printf("layer%d:layer.framebuffer = 0x%p\n", index, layer.framebuffer);
-			
-			index++;
-		}
 	}
-	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
-	printf("inst=0x%p\n", inst);
-	printf("gpudev=0x%p\n", gpudev);
-	printf("minTexelBufferOffsetAlignment  =0x%p\n", (void *)gpu_props.limits.minTexelBufferOffsetAlignment);
-	printf("minUniformBufferOffsetAlignment=0x%p\n", (void *)gpu_props.limits.minUniformBufferOffsetAlignment);
-	printf("minStorageBufferOffsetAlignment=0x%p\n", (void *)gpu_props.limits.minStorageBufferOffsetAlignment);
-	printf("maxDescriptorSetUniformBuffersDynamic=0x%p\n", (void *)gpu_props.limits.maxDescriptorSetUniformBuffersDynamic);
-	
-	printf("graphics_queue_family_index=%d\n", graphics_queue_family_index);
-	printf("queue_family_count=%d\n", queue_family_count);
-	printf("gpudev=0x%p\n", gpudev);
-	printf("device=0x%p\n", device);
-	printf("surface=0x%p\n", surface);
-	printf("swapchain=0x%p\n", swapchain);
-	printf("graphics_queue=0x%p\n", graphics_queue);
-	printf("cmd_pool=0x%p\n", cmd_pool);
-	printf("devmem_local=0x%p\n", devmem_local);
-	printf("descriptor_pool=0x%p\n", descriptor_pool);
-	printf("cp_update_buffer=0x%p\n", cp_update_buffer);
-	printf("pipeline_layout=0x%p\n", pipeline_layout);
-	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
-
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
@@ -1311,10 +1205,6 @@ main(int argc, char *argv[])
 		backbuffer_index = frame_count % FrameFifoMax;
 		uint32_t present_index = 0;
 		auto & ref = frame_info[backbuffer_index];
-		for(int index = 0 ; auto & layer : ref.layer) {
-			printf("ref.host_memory_addr=0x%p, buffer=0x%p\n", layer.host_memory_addr, layer.buffer);
-		}
-		
 		//test update
 		{
 			for(auto & layer : ref.layer) {
