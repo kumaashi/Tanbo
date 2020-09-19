@@ -994,6 +994,27 @@ cmd_end_render_pass(VkCommandBuffer cmdbuf)
 	vkCmdEndRenderPass(cmdbuf);
 }
 
+static void
+cmd_blit_image(VkCommandBuffer cmdbuf, VkImage dst, VkImage src, uint32_t dst_w, uint32_t dst_h, uint32_t src_w, uint32_t src_h)
+{
+	VkImageBlit image_blit = {};
+
+	image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	image_blit.srcSubresource.layerCount = 1;
+	image_blit.srcOffsets[1].x = int32_t(src_w);
+	image_blit.srcOffsets[1].y = int32_t(src_h);
+	image_blit.srcOffsets[1].z = 1;
+
+	image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	image_blit.dstSubresource.layerCount = 1;
+	image_blit.dstOffsets[1].x = int32_t(dst_w);
+	image_blit.dstOffsets[1].y = int32_t(dst_h);
+	image_blit.dstOffsets[1].z = 1;
+	vkCmdBlitImage(cmdbuf,
+		src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
+}
+
 
 int
 main(int argc, char *argv[])
@@ -1022,6 +1043,8 @@ main(int argc, char *argv[])
 	};
 
 	enum {
+		ScreenWidth = 1280,
+		ScreenHeight = 960,
 		Width = 640,
 		Height = 480,
 		BitsSize = 4,
@@ -1070,7 +1093,7 @@ main(int argc, char *argv[])
 	uint32_t gpu_count = 0;
 	uint32_t queue_family_count = 0;
 	uint32_t graphics_queue_family_index = -1;
-	static auto hwnd = InitWindow(argv[0], Width, Height);
+	static auto hwnd = InitWindow(argv[0], ScreenWidth, ScreenHeight);
 	static auto inst = create_instance(appname);
 	static VkPhysicalDevice gpudev = VK_NULL_HANDLE;
 	auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
@@ -1090,7 +1113,7 @@ main(int argc, char *argv[])
 	static auto device = create_device(gpudev, graphics_queue_family_index);
 	static auto cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 	static auto surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
-	static auto swapchain = create_swapchain(device, surface, Width, Height, FrameFifoMax);
+	static auto swapchain = create_swapchain(device, surface, ScreenWidth, ScreenHeight, FrameFifoMax);
 	static VkQueue graphics_queue = VK_NULL_HANDLE;
 	vkGetDeviceQueue(device, graphics_queue_family_index, 0, &graphics_queue);
 	std::vector<VkImage> temp;
@@ -1193,6 +1216,7 @@ main(int argc, char *argv[])
 		}
 		
 		cmd_clear_image(ref.cmdbuf, ref.backbuffer_image, !i, !!i, !i, 1);
+		cmd_blit_image(ref.cmdbuf, ref.backbuffer_image, ref.layer[0].image, ScreenWidth, ScreenHeight, Width, Height);
 		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		vkEndCommandBuffer(ref.cmdbuf);
 	}
