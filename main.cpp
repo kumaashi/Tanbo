@@ -808,8 +808,8 @@ create_gpipeline_from_file(
 
 	//SETUP DS
 	ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	ds.depthTestEnable = VK_TRUE;
-	ds.depthWriteEnable = VK_TRUE;
+	ds.depthTestEnable = VK_FALSE;
+	ds.depthWriteEnable = VK_FALSE;
 	ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 	ds.depthBoundsTestEnable = VK_FALSE;
 	ds.back.failOp = VK_STENCIL_OP_KEEP;
