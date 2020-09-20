@@ -341,8 +341,8 @@ main(int argc, char *argv[])
 				ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
 				for (int i = 0 ; i < ObjectMax; i++) {
 					p->metadata[0] = 1;
-					p->pos[0] = cos(123.0 * frandom() + phase * 2.0);
-					p->pos[1] = sin(456.0 * frandom() + phase * 3.0);
+					p->pos[0] = cos(123.0f * frandom() + phase * 2.0);
+					p->pos[1] = sin(456.0f * frandom() + phase * 3.0);
 					p->scale[0] = 0.25;
 					p->scale[1] = 0.05;
 					p->rotate[0] = frandom() * 4.0 + phase;
