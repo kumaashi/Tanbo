@@ -163,11 +163,12 @@ bind_debug_fn(
 
 
 [[ nodiscard ]] static VkInstance
-create_instance(const char *appname) {
+create_instance(const char *appname)
+{
 	const char *vinstance_ext_names[] = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-		
+
 
 #ifdef VKWIN32_DEBUG
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
@@ -208,7 +209,7 @@ create_instance(const char *appname) {
 	drcc_info.pfnCallback = &vk_callback_printf;
 #endif //VKWIN32_DEBUG
 	auto err = vkCreateInstance(&inst_info, NULL, &inst);
-	
+
 #ifdef VKWIN32_DEBUG
 	bind_debug_fn(inst, drcc_info);
 #endif //VKWIN32_DEBUG
@@ -856,7 +857,7 @@ create_gpipeline_from_file(
 	VkPipelineColorBlendAttachmentState att_state[1] = {};
 	att_state[0].colorWriteMask = 0xf;
 	att_state[0].blendEnable = VK_TRUE;
-	
+
 	//att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
 	//att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;        //
 	////VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
@@ -864,15 +865,15 @@ create_gpipeline_from_file(
 	//att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	//att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
-	
+
 	att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
 	att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
-	
-	
+
+
 	cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	cb.attachmentCount = 1;
 	cb.pAttachments = att_state;

@@ -235,11 +235,11 @@ main(int argc, char *argv[])
 	static auto render_pass = create_render_pass(device, VK_FORMAT_R8G8B8A8_UNORM);
 	static auto cp_update_buffer = create_cpipeline_from_file(device, "shaders/update_buffer", pipeline_layout);
 	static VkPipeline gp_draw_rects[LayerMax];
-	for(int i = 0 ; i < LayerMax; i++) {
+	for (int i = 0 ; i < LayerMax; i++) {
 		auto shader_name = "shaders/draw_rect" + std::to_string(i);
 		gp_draw_rects[i] = create_gpipeline_from_file(device, shader_name.c_str(), pipeline_layout, render_pass);
 	}
-	
+
 	for (int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
 		uint8_t *temp_addr = nullptr;
@@ -270,7 +270,7 @@ main(int argc, char *argv[])
 			layer.buffer = create_buffer(device, ObjectMaxBytes);
 			vkBindBufferMemory(device, layer.buffer, ref.devmem_host, ref.devmem_host_offset);
 			ref.devmem_host_offset += ObjectMaxBytes;
-			layer.host_memory_addr= temp_addr;
+			layer.host_memory_addr = temp_addr;
 			temp_addr += ObjectMaxBytes;
 
 			layer.vertex_buffer = create_buffer(device, VertexMaxBytes);
@@ -383,7 +383,7 @@ main(int argc, char *argv[])
 		present_surface(graphics_queue, swapchain, present_index);
 		frame_count++;
 		if ((frame_count % 60) == 0) {
-			for(int i = 0 ; auto & layer : ref.layer)
+			for (int i = 0 ; auto & layer : ref.layer)
 				printf("%d:layer.host_memory_addr=%p\n", i, layer.host_memory_addr);
 			printf("frame_count=%lld\n", frame_count);
 			printf("GpuMemoryMax=%d MByte\n", GpuMemoryMax / 1024 / 1024);
