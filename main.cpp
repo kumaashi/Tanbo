@@ -227,8 +227,8 @@ main(int argc, char *argv[])
 		pipeline_layout = create_pipeline_layout(device, vdescriptor_layouts.data(), vdescriptor_layouts.size());
 	}
 	static auto render_pass = create_render_pass(device, VK_FORMAT_R8G8B8A8_UNORM);
-	static auto cp_update_buffer = create_cpipeline_from_file(device, "update_buffer", pipeline_layout);
-	static auto gp_draw_rect = create_gpipeline_from_file(device, "draw_rect", pipeline_layout, render_pass);
+	static auto cp_update_buffer = create_cpipeline_from_file(device, "shaders/update_buffer", pipeline_layout);
+	static auto gp_draw_rect = create_gpipeline_from_file(device, "shaders/draw_rect", pipeline_layout, render_pass);
 
 	for (int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
