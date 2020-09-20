@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 	auto frand = []() {
 		return float(rand()) / float(0x7FFF);
 	};
-	auto frandom = [=]() {
+	auto frandom = [ = ]() {
 		return frand() * 2.0f - 1.0f;
 	};
 
@@ -155,7 +155,7 @@ main(int argc, char *argv[])
 		uint64_t offset_devmem_host = 0;
 		VkDeviceMemory devmem_dest = VK_NULL_HANDLE;
 		uint64_t offset_devmem_dest = 0;
-		
+
 		struct layer_t {
 			VkDescriptorSet descriptor_set_srv = VK_NULL_HANDLE;
 			VkDescriptorSet descriptor_set_cbv = VK_NULL_HANDLE;
@@ -229,20 +229,20 @@ main(int argc, char *argv[])
 	static auto render_pass = create_render_pass(device, VK_FORMAT_R8G8B8A8_UNORM);
 	static auto cp_update_buffer = create_cpipeline_from_file(device, "update_buffer", pipeline_layout);
 	static auto gp_draw_rect = create_gpipeline_from_file(device, "draw_rect", pipeline_layout, render_pass);
-	
-	for(int i = 0 ; i < FrameFifoMax; i++) {
+
+	for (int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
 		ref.backbuffer_image = temp[i];
 		ref.fence = create_fence(device);
 		ref.sem = create_semaphore(device);
-		
+
 		ref.devmem_host = alloc_device_memory(gpudev, device, LayerMax * ObjectMaxBytes, true);
 		ref.devmem_dest = alloc_device_memory(gpudev, device, LayerMax * VertexMaxBytes, false);
 		uint8_t *temp_addr = nullptr;
 		vkMapMemory(device, ref.devmem_host, 0, LayerMax * ObjectMaxBytes, 0, (void **)&temp_addr);
 
 		auto image_usage_flags = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		for(auto & layer : ref.layer) {
+		for (auto & layer : ref.layer) {
 			layer.descriptor_set_srv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_SRV]);
 			layer.descriptor_set_cbv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_CBV]);
 			layer.descriptor_set_uav = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_UAV]);
@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 			layer.vertex_buffer = create_buffer(device, VertexMaxBytes);
 			vkBindBufferMemory(device, layer.buffer, ref.devmem_host, ref.offset_devmem_host);
 			vkBindBufferMemory(device, layer.vertex_buffer, ref.devmem_dest, ref.offset_devmem_dest);
-			
+
 			ref.offset_devmem_host += ObjectMaxBytes;
 			ref.offset_devmem_dest += VertexMaxBytes;
 
@@ -274,7 +274,7 @@ main(int argc, char *argv[])
 		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		vkBeginCommandBuffer(ref.cmdbuf, &cmdbegininfo);
-		for(auto & layer : ref.layer) {
+		for (auto & layer : ref.layer) {
 			std::vector<VkDescriptorSet> vdescriptor_sets = {
 				layer.descriptor_set_srv,
 				layer.descriptor_set_cbv,
@@ -294,7 +294,7 @@ main(int argc, char *argv[])
 			vkCmdDraw(ref.cmdbuf, ObjectMax * 6, ObjectMax, 0, 0);
 			cmd_end_render_pass(ref.cmdbuf);
 		}
-		
+
 		cmd_clear_image(ref.cmdbuf, ref.backbuffer_image, !i, !!i, !i, 1);
 		cmd_blit_image(ref.cmdbuf, ref.backbuffer_image, ref.layer[0].image, ScreenWidth, ScreenHeight, Width, Height);
 		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -305,21 +305,21 @@ main(int argc, char *argv[])
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	printf("START\n");
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
-	while(Update()) {
+	while (Update()) {
 		backbuffer_index = frame_count % FrameFifoMax;
 		uint32_t present_index = 0;
 		auto & ref = frame_info[backbuffer_index];
 		//test update
 		{
-			for(auto & layer : ref.layer) {
+			for (auto & layer : ref.layer) {
 				ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
-				for(int i = 0 ; i < ObjectMax; i++) {
+				for (int i = 0 ; i < ObjectMax; i++) {
 					p->pos[0] = frandom();
 					p->pos[1] = frandom();
 					p->scale[0] = 0.1;
 					p->scale[1] = 0.1;
 					p->rotate[0] = frandom() * 4.0;
-					
+
 					p->color[0] = frand();
 					p->color[1] = frand();
 					p->color[2] = frand();
@@ -336,7 +336,7 @@ main(int argc, char *argv[])
 		present_surface(graphics_queue, swapchain, present_index);
 		frame_count++;
 		Sleep(0);
-		if((frame_count % 60) == 0) {
+		if ((frame_count % 60) == 0) {
 			printf("frame_count=%lld\n", frame_count);
 		}
 	}

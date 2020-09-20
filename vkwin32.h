@@ -50,9 +50,9 @@ fork_process_wait(
 	STARTUPINFO si = {};
 	si.cb = sizeof(si);
 	auto ret = CreateProcess(
-		NULL, (LPTSTR)command,
-		NULL, NULL, FALSE,
-		NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi);
+			NULL, (LPTSTR)command,
+			NULL, NULL, FALSE,
+			NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi);
 	if (!ret) {
 		printf("failed command:\n%s\n\n", command);
 		return;
@@ -120,11 +120,12 @@ compile_glsl2spirv(
 [[ nodiscard ]]
 inline VkInstance
 create_instance(
-	const char *appname) {
+	const char *appname)
+{
 	const char *vinstance_ext_names[] = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-		
+
 
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 	};
@@ -257,7 +258,7 @@ alloc_device_memory(
 
 	if (is_host) {
 		flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	}
 	for (uint32_t i = 0; i < devprop.memoryTypeCount; i++) {
 		if ((devprop.memoryTypes[i].propertyFlags & flags) == flags) {
@@ -330,14 +331,14 @@ create_swapchain(
 	info.imageExtent.height = height;
 	info.imageArrayLayers = 1;
 	info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-	VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 	info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
 	info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 	//info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-	
+
 	info.clipped = VK_TRUE;
 	vkCreateSwapchainKHR(device, &info, nullptr, &ret);
 	return (ret);
@@ -408,7 +409,8 @@ set_image_memory_barrier(
 	ret.subresourceRange = {
 		aspectMask,
 		baseMipLevel, levelCount,
-		baseArrayLayer, layerCount };
+		baseArrayLayer, layerCount
+	};
 	vkCmdPipelineBarrier(cmdbuf,
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -508,7 +510,7 @@ create_image_view(
 inline VkRenderPass
 create_render_pass(
 	VkDevice device,
-	VkFormat color_format, 
+	VkFormat color_format,
 	uint32_t color_num = 1)
 {
 	VkRenderPass ret = VK_NULL_HANDLE;
@@ -769,7 +771,9 @@ create_gpipeline_from_file(
 	att_state[0].colorWriteMask = 0xf;
 	att_state[0].blendEnable = VK_TRUE;
 	att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR; //VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+	//VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+
 	att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
 	att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -811,7 +815,7 @@ create_gpipeline_from_file(
 
 	if (!vs.empty()) {
 		auto module = create_shader_module(
-			device, vs.data(), vs.size());
+				device, vs.data(), vs.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		sstage.module = module;
@@ -819,7 +823,7 @@ create_gpipeline_from_file(
 	}
 	if (!ps.empty()) {
 		auto module = create_shader_module(
-			device, ps.data(), ps.size());
+				device, ps.data(), ps.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		sstage.module = module;
