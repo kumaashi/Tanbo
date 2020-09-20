@@ -176,6 +176,25 @@ create_device(VkPhysicalDevice gpudev, uint32_t graphics_queue_family_index)
 }
 
 [[ nodiscard ]]
+inline uint32_t
+get_graphics_queue_index(VkPhysicalDevice gpudev)
+{
+	uint32_t ret = 0;
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &queue_family_count, nullptr);
+	std::vector<VkQueueFamilyProperties> vqueue_props(queue_family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &queue_family_count, vqueue_props.data());
+	for (uint32_t i = 0; i < queue_family_count; i++) {
+		auto flags = vqueue_props[i].queueFlags;
+		if (flags & VK_QUEUE_GRAPHICS_BIT) {
+			ret = i;
+			break;
+		}
+	}
+	return (ret);
+}
+
+[[ nodiscard ]]
 inline VkSampler
 create_sampler(VkDevice device, bool isfilterd)
 {
@@ -504,7 +523,6 @@ create_image_view(
 	vkCreateImageView(device, &info, NULL, &ret);
 	return (ret);
 }
-
 
 [[ nodiscard ]]
 inline VkRenderPass
@@ -886,8 +904,8 @@ update_descriptor_sets(
 	VkDevice device,
 	VkDescriptorSet descriptor_sets,
 	const void *pinfo,
-	uint32_t index,
 	uint32_t binding,
+	uint32_t index,
 	VkDescriptorType type)
 {
 	VkWriteDescriptorSet wd_sets = {};
@@ -911,10 +929,28 @@ update_descriptor_sets(
 }
 
 inline void
+update_descriptor_combined_image_sample(
+	VkDevice device,
+	VkDescriptorSet dset,
+	uint32_t binding,
+	uint32_t index,
+	VkImageView image_view,
+	VkSampler sampler)
+{
+	VkDescriptorImageInfo info = {};
+	info.sampler = sampler;
+	info.imageView = image_view;
+	info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	update_descriptor_sets(device, dset, &info,
+		binding, index, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+}
+
+inline void
 update_descriptor_storage_buffer(
 	VkDevice device,
 	VkDescriptorSet dset,
 	uint32_t binding,
+	uint32_t index,
 	VkBuffer buf,
 	VkDeviceSize bytes)
 {
@@ -924,7 +960,7 @@ update_descriptor_storage_buffer(
 	info.offset = 0;
 	info.range = bytes;
 	update_descriptor_sets(device, dset, &info,
-		0, binding,
+		binding, index,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 }
 
