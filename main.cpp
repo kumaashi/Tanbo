@@ -334,7 +334,6 @@ main(int argc, char *argv[])
 		//test update
 		{
 			srand(0);
-			auto TEST_MAX = ObjectMax;
 			auto arg = ref.host_draw_indirect_cmd;
 			for (int i = 0 ; i < LayerMax - 1; i++) {
 				auto & layer = ref.layer[i];
