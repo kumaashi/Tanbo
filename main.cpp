@@ -132,7 +132,7 @@ main(int argc, char *argv[])
 		Height = 480,
 		BitsSize = 4,
 		ImageSize = Width * Width * BitsSize,
-		ObjectMax = 32768,
+		ObjectMax = 4096,
 		LayerMax = 8,
 		DescriptorArrayMax = 32,
 		DrawIndirectCommandSize = LayerMax * sizeof(VkDrawIndirectCommand),
@@ -305,9 +305,9 @@ main(int argc, char *argv[])
 			set_image_memory_barrier(ref.cmdbuf, layer.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 			cmd_clear_image(ref.cmdbuf, layer.image, 0, 0, 0, 0);
 			vkCmdBindPipeline(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, gp_draw_rects[layer_num]);
+			vkCmdBindDescriptorSets(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, vdescriptor_sets.size(), vdescriptor_sets.data(), 0, NULL);
 			VkDeviceSize offsets[1] = {0};
 			vkCmdBindVertexBuffers(ref.cmdbuf, 0, 1, &layer.vertex_buffer, offsets);
-			vkCmdBindDescriptorSets(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, vdescriptor_sets.size(), vdescriptor_sets.data(), 0, NULL);
 			cmd_begin_render_pass(ref.cmdbuf, render_pass, layer.framebuffer, Width, Height);
 			vkCmdDrawIndirect(ref.cmdbuf, ref.indirect_draw_cmd_buffer, sizeof(VkDrawIndirectCommand) * layer_num, 1, sizeof(VkDrawIndirectCommand));
 			cmd_end_render_pass(ref.cmdbuf);
@@ -334,13 +334,12 @@ main(int argc, char *argv[])
 		//test update
 		{
 			srand(0);
-			auto TEST_MAX = 2048;
+			auto TEST_MAX = ObjectMax;
 			auto arg = ref.host_draw_indirect_cmd;
 			for (int i = 0 ; i < LayerMax - 1; i++) {
 				auto & layer = ref.layer[i];
 				ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
-				//printf("%d:layer.host_memory_addr=%p\n", i, layer.host_memory_addr);
-				for (int i = 0 ; i < TEST_MAX; i++) {
+				for (int i = 0 ; i < ObjectMax; i++) {
 					p->metadata[0] = 1;
 					p->pos[0] = cos(123.0 * frandom() + phase * 2.0);
 					p->pos[1] = sin(456.0 * frandom() + phase * 3.0);
@@ -354,7 +353,7 @@ main(int argc, char *argv[])
 					p->color[3] = 1.0;
 					p++;
 				}
-				arg->vertexCount = TEST_MAX * 6;
+				arg->vertexCount = ObjectMax * 6;
 				arg->instanceCount = 1;
 				arg->firstVertex = 0;
 				arg->firstInstance = 0;
@@ -384,6 +383,8 @@ main(int argc, char *argv[])
 		present_surface(graphics_queue, swapchain, present_index);
 		frame_count++;
 		if ((frame_count % 60) == 0) {
+			for(int i = 0 ; auto & layer : ref.layer)
+				printf("%d:layer.host_memory_addr=%p\n", i, layer.host_memory_addr);
 			printf("frame_count=%lld\n", frame_count);
 			printf("GpuMemoryMax=%d MByte\n", GpuMemoryMax / 1024 / 1024);
 			printf("LocalMemRemain=%d MByte\n", (GpuMemoryMax - devmem_local_offset) / 1024 / 1024);
