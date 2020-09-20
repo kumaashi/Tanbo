@@ -611,7 +611,7 @@ create_render_pass(
 	col_attachment.format = color_format;
 	col_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 
-	col_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	col_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	col_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	col_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	col_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

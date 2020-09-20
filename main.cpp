@@ -20,7 +20,7 @@
  *
  */
 
-#define VKWIN32_DEBUG
+//#define VKWIN32_DEBUG
 #include "vkwin32.h"
 
 static LRESULT WINAPI
@@ -132,11 +132,11 @@ main(int argc, char *argv[])
 		Height = 480,
 		BitsSize = 4,
 		ImageSize = Width * Width * BitsSize,
-		ObjectMax = 4096,
+		ObjectMax = 32768,
 		LayerMax = 8,
-		GpuMemoryMax = ImageSize * LayerMax * 4,
 		DescriptorArrayMax = 32,
-		DrawIndirectCommandSize = sizeof(VkDrawIndirectCommand),
+		DrawIndirectCommandSize = LayerMax * sizeof(VkDrawIndirectCommand),
+		GpuMemoryMax = ImageSize * LayerMax * 4,
 		ObjectMaxBytes = ObjectMax * sizeof(ObjectFormat),
 		VertexMaxBytes = ObjectMax * sizeof(VertexFormat) * 6,
 	};
@@ -326,30 +326,32 @@ main(int argc, char *argv[])
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
+	double phase = 0.0;
 	while (Update()) {
-		printf("GpuMemoryMax=%d MByte\n", GpuMemoryMax / 1024 / 1024);
-		printf("LocalMemRemain=%d MByte\n", (GpuMemoryMax - devmem_local_offset) / 1024 / 1024);
+		phase += 0.01;
 		backbuffer_index = frame_count % FrameFifoMax;
 		auto & ref = frame_info[backbuffer_index];
 		//test update
 		{
-			auto TEST_MAX = 256;
+			srand(0);
+			auto TEST_MAX = 2048;
 			auto arg = ref.host_draw_indirect_cmd;
 			for (int i = 0 ; i < LayerMax - 1; i++) {
 				auto & layer = ref.layer[i];
 				ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
+				//printf("%d:layer.host_memory_addr=%p\n", i, layer.host_memory_addr);
 				for (int i = 0 ; i < TEST_MAX; i++) {
-					p->pos[0] = frandom();
-					p->pos[1] = frandom();
-					p->scale[0] = 0.2;
-					p->scale[1] = 0.125;
-					p->rotate[0] = frandom() * 4.0;
+					p->metadata[0] = 1;
+					p->pos[0] = cos(123.0 * frandom() + phase * 2.0);
+					p->pos[1] = sin(456.0 * frandom() + phase * 3.0);
+					p->scale[0] = 0.25;
+					p->scale[1] = 0.05;
+					p->rotate[0] = frandom() * 4.0 + phase;
 
 					p->color[0] = frand();
 					p->color[1] = frand();
 					p->color[2] = frand();
 					p->color[3] = 1.0;
-					p->metadata[0] = 1;
 					p++;
 				}
 				arg->vertexCount = TEST_MAX * 6;
@@ -372,18 +374,19 @@ main(int argc, char *argv[])
 			arg->firstVertex = 0;
 			arg->firstInstance = 0;
 		}
-		
-		//Submit Command.
+
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
 		uint32_t present_index = 0;
 		vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
-		printf("SUBMIT : present_index=%d\n", present_index);
+		//printf("SUBMIT : present_index=%d\r", present_index);
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
 		frame_count++;
 		if ((frame_count % 60) == 0) {
 			printf("frame_count=%lld\n", frame_count);
+			printf("GpuMemoryMax=%d MByte\n", GpuMemoryMax / 1024 / 1024);
+			printf("LocalMemRemain=%d MByte\n", (GpuMemoryMax - devmem_local_offset) / 1024 / 1024);
 		}
 	}
 }

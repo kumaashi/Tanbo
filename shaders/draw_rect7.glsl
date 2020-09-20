@@ -35,7 +35,7 @@ layout(location=2) out vec4 v_color;
 
 void main()
 {
-	v_pos = vec4(position.xyz, 1.0);
+	v_pos = vec4(position.xyz * vec3(640.0 / 480.0, 1.0, 1.0), 1.0);
 	v_uv = uv.xy;
 	v_color = color;
 	gl_Position = v_pos;
@@ -54,13 +54,14 @@ layout(location=0) out vec4 out_color;
 void main(){
 	vec2 uv = v_uv * 0.5 + 0.5;
 	out_color = vec4(0.0);
-	out_color.xyz += texture(tex[0], uv).xyz;
-	out_color.xyz += texture(tex[1], uv).xyz;
-	out_color.xyz += texture(tex[2], uv).xyz;
-	out_color.xyz += texture(tex[3], uv).xyz;
-	out_color.xyz += texture(tex[4], uv).xyz;
-	out_color.xyz += texture(tex[5], uv).xyz;
-	out_color.xyz += texture(tex[6], uv).xyz;
+	out_color.xyz += pow(texture(tex[0], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[1], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[2], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[3], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[4], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[5], uv).xyz, vec3(1.5));
+	out_color.xyz += pow(texture(tex[6], uv).xyz, vec3(1.5));
 	out_color.a = 1.0;
+	out_color.xyz = vec3(1.0) - out_color.xyz;
 }
 #endif //_PS_
