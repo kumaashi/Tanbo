@@ -246,8 +246,8 @@ main(int argc, char *argv[])
 		ref.backbuffer_image = temp[i];
 		ref.fence = create_fence(device);
 		ref.sem = create_semaphore(device);
-		ref.devmem_host = alloc_device_memory(gpudev, device, LayerMax * ObjectMaxBytes * 2, true);
-		ref.devmem_local_vertex = alloc_device_memory(gpudev, device, LayerMax * VertexMaxBytes * 2, false);
+		ref.devmem_host = alloc_device_memory(gpudev, device, LayerMax * ObjectMaxBytes, true);
+		ref.devmem_local_vertex = alloc_device_memory(gpudev, device, LayerMax * VertexMaxBytes, false);
 		vkMapMemory(device, ref.devmem_host, 0, LayerMax * ObjectMaxBytes, 0, (void **)&temp_addr);
 
 		ref.devmem_host_draw_indirect_cmd = alloc_device_memory(gpudev, device, DrawIndirectCommandSize, true);
