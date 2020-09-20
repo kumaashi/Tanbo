@@ -117,34 +117,102 @@ compile_glsl2spirv(
 }
 
 
-[[ nodiscard ]]
-inline VkInstance
-create_instance(
-	const char *appname)
+#ifdef VKWIN32_DEBUG
+static VKAPI_ATTR VkBool32
+VKAPI_CALL vk_callback_printf(
+	VkDebugReportFlagsEXT flags,
+	VkDebugReportObjectTypeEXT,
+	uint64_t object,
+	size_t location,
+	int32_t messageCode,
+	const char* pLayerPrefix,
+	const char* pMessage,
+	void* pUserData)
 {
+	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+		printf("\n\nvkdbg: ERROR : ");
+	if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+		printf("\n\nvkdbg: WARNING : ");
+	if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+		printf("\n\nvkdbg: PERFORMANCE : ");
+	if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+		printf("INFO : ");
+	if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+		printf("DEBUG : ");
+	printf("%s", pMessage);
+	printf("\n");
+	return VK_FALSE;
+}
+
+VkDebugReportCallbackEXT
+bind_debug_fn(
+	VkInstance instance,
+	VkDebugReportCallbackCreateInfoEXT ext)
+{
+	VkDebugReportCallbackEXT callback = NULL;
+	auto cb = PFN_vkCreateDebugReportCallbackEXT(
+			vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+
+	if (cb)
+		cb(instance, &ext, nullptr, &callback);
+	else
+		printf("PFN_vkCreateDebugReportCallbackEXT IS NULL\n");
+	return callback;
+}
+#endif //VKWIN32_DEBUG
+
+
+[[ nodiscard ]] static VkInstance
+create_instance(const char *appname) {
 	const char *vinstance_ext_names[] = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+		
 
-
+#ifdef VKWIN32_DEBUG
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif //VKWIN32_DEBUG
 	};
 	VkInstance inst = VK_NULL_HANDLE;
 	VkApplicationInfo vkapp = {};
-	VkInstanceCreateInfo info = {};
-
+	VkInstanceCreateInfo inst_info = {};
 	vkapp.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+
+#ifdef VKWIN32_DEBUG
+	VkDebugReportCallbackCreateInfoEXT drcc_info = {};
+	vkapp.pNext = &drcc_info;
+#endif //VKWIN32_DEBUG
 	vkapp.pApplicationName = appname;
 	vkapp.pEngineName = appname;
 	vkapp.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
 	vkapp.apiVersion = VK_API_VERSION_1_0;
-	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	info.pNext = NULL;
-	info.pApplicationInfo = &vkapp;
-	info.enabledExtensionCount = (uint32_t)_countof(vinstance_ext_names);
-	info.ppEnabledExtensionNames = vinstance_ext_names;
+	inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	inst_info.pNext = NULL;
+	inst_info.pApplicationInfo = &vkapp;
+	inst_info.enabledExtensionCount = (uint32_t)_countof(vinstance_ext_names);
+	inst_info.ppEnabledExtensionNames = vinstance_ext_names;
+#ifdef VKWIN32_DEBUG
+	static const char *debuglayers[] = {
+		"VK_LAYER_KHRONOS_validation",
+	};
+	inst_info.enabledLayerCount = _countof(debuglayers);
+	inst_info.ppEnabledLayerNames = debuglayers;
 
-	auto err = vkCreateInstance(&info, NULL, &inst);
+	drcc_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	drcc_info.flags = 0;
+	drcc_info.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
+	drcc_info.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	drcc_info.flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+	drcc_info.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+	drcc_info.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+	drcc_info.pfnCallback = &vk_callback_printf;
+#endif //VKWIN32_DEBUG
+	auto err = vkCreateInstance(&inst_info, NULL, &inst);
+	
+#ifdef VKWIN32_DEBUG
+	bind_debug_fn(inst, drcc_info);
+#endif //VKWIN32_DEBUG
+
 	return inst;
 }
 
