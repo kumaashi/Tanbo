@@ -56,7 +56,10 @@ layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 void main()
 {
 	uint tid = gl_GlobalInvocationID.x;
-	
+	uint valid = obj[tid].metadata[0];
+	if(valid == 0)
+		return;
+
 	vec4 pos = obj[tid].pos;
 	vec4 scale = obj[tid].scale;
 	vec4 color = obj[tid].color;

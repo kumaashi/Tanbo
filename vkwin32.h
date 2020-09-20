@@ -605,27 +605,27 @@ create_render_pass(
 	std::vector<VkAttachmentDescription> vattachments;
 	std::vector<VkAttachmentReference> vattachment_refs;
 	std::vector<VkSubpassDependency> vsubpassdepends;
-	VkAttachmentDescription color_attachment = {};
+	VkAttachmentDescription col_attachment = {};
 
-	color_attachment.flags = 0;
-	color_attachment.format = color_format;
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	col_attachment.flags = 0;
+	col_attachment.format = color_format;
+	col_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 
-	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+	col_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	col_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	col_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	col_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	col_attachment.initialLayout = VK_IMAGE_LAYOUT_GENERAL;
+	col_attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 	VkAttachmentReference color_reference = {};
 	color_reference.attachment = 0;
-	color_reference.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_reference.layout = VK_IMAGE_LAYOUT_GENERAL;
 
 	for (int i = 0 ; i < color_num; i++) {
 		auto ref = color_reference;
 		ref.attachment = attachment_index;
-		vattachments.push_back(color_attachment);
+		vattachments.push_back(col_attachment);
 		vattachment_refs.push_back(ref);
 		attachment_index++;
 	}
@@ -856,14 +856,23 @@ create_gpipeline_from_file(
 	VkPipelineColorBlendAttachmentState att_state[1] = {};
 	att_state[0].colorWriteMask = 0xf;
 	att_state[0].blendEnable = VK_TRUE;
-	att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-	//VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
-
-	att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
-	att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	
+	//att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+	//att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;        //
+	////VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+	//att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+	//att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	//att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+	
+	att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+	att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+	
+	
 	cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	cb.attachmentCount = 1;
 	cb.pAttachments = att_state;
@@ -1046,12 +1055,8 @@ cmd_clear_image(
 	VkImageSubresourceRange image_range_color = {
 		VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
 	};
-	set_image_memory_barrier(cmdbuf, image, VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 	vkCmdClearColorImage(cmdbuf, image,
 		VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &image_range_color);
-	set_image_memory_barrier(cmdbuf, image, VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 inline void

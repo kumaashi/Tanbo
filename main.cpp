@@ -19,6 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
+
+#define VKWIN32_DEBUG
 #include "vkwin32.h"
 
 static LRESULT WINAPI
@@ -125,15 +127,16 @@ main(int argc, char *argv[])
 	enum {
 		ScreenWidth = 1024,
 		ScreenHeight = 768,
+		FrameFifoMax = 2,
 		Width = 640,
 		Height = 480,
 		BitsSize = 4,
 		ImageSize = Width * Width * BitsSize,
-		FrameFifoMax = 2,
-		ObjectMax = 2048,
+		ObjectMax = 4096,
 		LayerMax = 8,
 		GpuMemoryMax = ImageSize * LayerMax * 4,
 		DescriptorArrayMax = 32,
+		DrawIndirectCommandSize = sizeof(VkDrawIndirectCommand),
 		ObjectMaxBytes = ObjectMax * sizeof(ObjectFormat),
 		VertexMaxBytes = ObjectMax * sizeof(VertexFormat) * 6,
 	};
@@ -152,34 +155,31 @@ main(int argc, char *argv[])
 		VkCommandBuffer cmdbuf = VK_NULL_HANDLE;
 
 		VkDeviceMemory devmem_host = VK_NULL_HANDLE;
-		uint64_t devmem_host_offset = 0;
-		VkDeviceMemory devmem_dest = VK_NULL_HANDLE;
-		uint64_t devmem_local_vertex = 0;
+		VkDeviceMemory devmem_local_vertex = VK_NULL_HANDLE;
+		VkDeviceMemory devmem_host_draw_indirect_cmd = VK_NULL_HANDLE;
 
-		VkBuffer buffer = VK_NULL_HANDLE;
+		uint64_t devmem_host_offset = 0;
+		uint64_t devmem_local_vertex_offset = 0;
+
 		VkDescriptorSet descriptor_set_cbv = VK_NULL_HANDLE;
 		VkDescriptorSet descriptor_set_srv = VK_NULL_HANDLE;
 
+		VkBuffer indirect_draw_cmd_buffer = VK_NULL_HANDLE;
+		VkDrawIndirectCommand *host_draw_indirect_cmd = nullptr;
+
 		struct layer_t {
+			VkDescriptorSet descriptor_set_uav = VK_NULL_HANDLE;
 			VkImage image = VK_NULL_HANDLE;
 			VkImageView image_view = VK_NULL_HANDLE;
 			VkFramebuffer framebuffer = VK_NULL_HANDLE;
-
-			VkDescriptorSet descriptor_set_uav = VK_NULL_HANDLE;
 			VkBuffer buffer = VK_NULL_HANDLE;
 			void *host_memory_addr = nullptr;
-
-			VkBuffer indirect_arg_buffer = VK_NULL_HANDLE;
-			void *host_indirect_arg_buffer_addr = nullptr;
-
 			VkBuffer vertex_buffer = VK_NULL_HANDLE;
 		} layer[LayerMax];
 	} frame_info[FrameFifoMax];
 
-
 	static auto hwnd = InitWindow(argv[0], ScreenWidth, ScreenHeight);
 	static auto inst = create_instance(appname);
-
 	uint32_t graphics_queue_family_index = -1;
 	uint32_t gpu_count = 0;
 	static VkPhysicalDevice gpudev = VK_NULL_HANDLE;
@@ -190,9 +190,14 @@ main(int argc, char *argv[])
 	VkPhysicalDeviceProperties gpu_props = {};
 	vkGetPhysicalDeviceProperties(gpudev, &gpu_props);
 
+	static auto surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
+	VkBool32 presentSupport = false;
+	vkGetPhysicalDeviceSurfaceSupportKHR(gpudev, 0, surface, &presentSupport);
+	VkSurfaceCapabilitiesKHR capabilities = {};
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpudev, surface, &capabilities);
+
 	static auto device = create_device(gpudev, graphics_queue_family_index);
 	static auto cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
-	static auto surface = create_win32_surface(inst, hwnd, GetModuleHandle(NULL));
 	static auto swapchain = create_swapchain(device, surface, ScreenWidth, ScreenHeight, FrameFifoMax);
 	static VkQueue graphics_queue = VK_NULL_HANDLE;
 	static auto sampler = create_sampler(device, true);
@@ -206,7 +211,7 @@ main(int argc, char *argv[])
 	}
 
 	auto devmem_local = alloc_device_memory(gpudev, device, GpuMemoryMax, false);
-	uint64_t offset_devmem_local = 0;
+	uint64_t devmem_local_offset = 0;
 
 	static auto descriptor_pool = create_descriptor_pool(device, DescriptorArrayMax);
 	static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
@@ -229,27 +234,35 @@ main(int argc, char *argv[])
 	}
 	static auto render_pass = create_render_pass(device, VK_FORMAT_R8G8B8A8_UNORM);
 	static auto cp_update_buffer = create_cpipeline_from_file(device, "shaders/update_buffer", pipeline_layout);
-	static auto gp_draw_rect = create_gpipeline_from_file(device, "shaders/draw_rect", pipeline_layout, render_pass);
-
+	static VkPipeline gp_draw_rects[LayerMax];
+	for(int i = 0 ; i < LayerMax; i++) {
+		auto shader_name = "shaders/draw_rect" + std::to_string(i);
+		gp_draw_rects[i] = create_gpipeline_from_file(device, shader_name.c_str(), pipeline_layout, render_pass);
+	}
+	
 	for (int i = 0 ; i < FrameFifoMax; i++) {
 		auto & ref = frame_info[i];
+		uint8_t *temp_addr = nullptr;
 		ref.backbuffer_image = temp[i];
 		ref.fence = create_fence(device);
 		ref.sem = create_semaphore(device);
-
-		ref.devmem_host = alloc_device_memory(gpudev, device, LayerMax * ObjectMaxBytes, true);
-		ref.devmem_dest = alloc_device_memory(gpudev, device, LayerMax * VertexMaxBytes, false);
-		uint8_t *temp_addr = nullptr;
+		ref.devmem_host = alloc_device_memory(gpudev, device, LayerMax * ObjectMaxBytes * 2, true);
+		ref.devmem_local_vertex = alloc_device_memory(gpudev, device, LayerMax * VertexMaxBytes * 2, false);
 		vkMapMemory(device, ref.devmem_host, 0, LayerMax * ObjectMaxBytes, 0, (void **)&temp_addr);
 
-		auto image_usage_flags = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		ref.devmem_host_draw_indirect_cmd = alloc_device_memory(gpudev, device, DrawIndirectCommandSize, true);
+		ref.indirect_draw_cmd_buffer = create_buffer(device, DrawIndirectCommandSize);
+		vkBindBufferMemory(device, ref.indirect_draw_cmd_buffer, ref.devmem_host_draw_indirect_cmd, 0);
+		vkMapMemory(device, ref.devmem_host_draw_indirect_cmd, 0, DrawIndirectCommandSize, 0, (void **)&ref.host_draw_indirect_cmd);
+
+		auto image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		ref.descriptor_set_srv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_SRV]);
 		ref.descriptor_set_cbv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_CBV]);
 		for (auto & layer : ref.layer) {
 			layer.descriptor_set_uav = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_UAV]);
 			layer.image = create_image(device, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, image_usage_flags);
-			vkBindImageMemory(device, layer.image, devmem_local, offset_devmem_local);
-			offset_devmem_local += ImageSize;
+			vkBindImageMemory(device, layer.image, devmem_local, devmem_local_offset);
+			devmem_local_offset += ImageSize;
 			layer.image_view = create_image_view(device, layer.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 			std::vector<VkImageView> vimageview = { layer.image_view, };
 			layer.framebuffer = create_framebuffer(device, render_pass, vimageview, Width, Height);
@@ -261,29 +274,15 @@ main(int argc, char *argv[])
 			temp_addr += ObjectMaxBytes;
 
 			layer.vertex_buffer = create_buffer(device, VertexMaxBytes);
-			vkBindBufferMemory(device, layer.vertex_buffer, ref.devmem_dest, ref.devmem_local_vertex);
-			ref.devmem_local_vertex += VertexMaxBytes;
-
-			/*
-			layer.indirect_arg_buffer = create_buffer(device, 4096);
-			vkBindBufferMemory(device, layer.indirect_arg_buffer, ref.devmem_host, ref.devmem_host_offset);
-			ref.devmem_host_offset += 4096;
-			layer.host_indirect_arg_buffer_addr = temp_addr;
-			temp_addr += 4096;
-			*/
-
-			update_descriptor_storage_buffer(
-				device, layer.descriptor_set_uav,
-				0, 0, layer.buffer, ObjectMaxBytes);
-			update_descriptor_storage_buffer(
-				device, layer.descriptor_set_uav,
-				1, 0, layer.vertex_buffer, VertexMaxBytes);
+			vkBindBufferMemory(device, layer.vertex_buffer, ref.devmem_local_vertex, ref.devmem_local_vertex_offset);
+			ref.devmem_local_vertex_offset += VertexMaxBytes;
 		}
-		for (int index = 0 ; auto & layer : ref.layer) {
-			update_descriptor_combined_image_sample(
-				device, ref.descriptor_set_srv,
-				0, index++,
-				layer.image_view, sampler);
+
+		for (uint32_t layer_num = 0 ; auto & layer : ref.layer) {
+			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 0, layer_num, layer.image_view, sampler);
+			update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 0, 0, layer.buffer, ObjectMaxBytes);
+			update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 1, 0, layer.vertex_buffer, VertexMaxBytes);
+			layer_num++;
 		}
 
 		ref.cmdbuf = create_command_buffer(device, cmd_pool);
@@ -292,39 +291,33 @@ main(int argc, char *argv[])
 		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		vkBeginCommandBuffer(ref.cmdbuf, &cmdbegininfo);
-		for (auto & layer : ref.layer) {
+		for (uint32_t layer_num = 0 ; auto & layer : ref.layer) {
 			std::vector<VkDescriptorSet> vdescriptor_sets = {
 				ref.descriptor_set_srv,
 				ref.descriptor_set_cbv,
 				layer.descriptor_set_uav,
 			};
-			cmd_set_viewport(ref.cmdbuf, 0, 0, Width, Height);
-			cmd_clear_image(ref.cmdbuf, layer.image, 0, 0, 0, 0);
 			vkCmdBindPipeline(ref.cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, cp_update_buffer);
 			vkCmdBindDescriptorSets(ref.cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, vdescriptor_sets.size(), vdescriptor_sets.data(), 0, NULL);
 			vkCmdDispatch(ref.cmdbuf, ObjectMax, 1, 1);
 
+			cmd_set_viewport(ref.cmdbuf, 0, 0, Width, Height);
+			set_image_memory_barrier(ref.cmdbuf, layer.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+			cmd_clear_image(ref.cmdbuf, layer.image, 0, 0, 0, 0);
+			vkCmdBindPipeline(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, gp_draw_rects[layer_num]);
 			VkDeviceSize offsets[1] = {0};
-			vkCmdBindPipeline(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, gp_draw_rect);
 			vkCmdBindVertexBuffers(ref.cmdbuf, 0, 1, &layer.vertex_buffer, offsets);
 			vkCmdBindDescriptorSets(ref.cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, vdescriptor_sets.size(), vdescriptor_sets.data(), 0, NULL);
 			cmd_begin_render_pass(ref.cmdbuf, render_pass, layer.framebuffer, Width, Height);
-			/*
-			typedef struct VkDrawIndirectCommand {
-				uint32_t vertexCount;
-				uint32_t instanceCount;
-				uint32_t firstVertex;
-				uint32_t firstInstance;
-			} VkDrawIndirectCommand;
-			*/
-			//vkCmdDrawIndirect(ref.cmdbuf, layer.indirect_arg_buffer, 0, 1, sizeof(VkDrawIndirectCommand));
-			vkCmdDraw(ref.cmdbuf, ObjectMax * 6, ObjectMax, 0, 0);
+			vkCmdDrawIndirect(ref.cmdbuf, ref.indirect_draw_cmd_buffer, sizeof(VkDrawIndirectCommand) * layer_num, 1, sizeof(VkDrawIndirectCommand));
 			cmd_end_render_pass(ref.cmdbuf);
+			layer_num++;
 		}
-
-		cmd_clear_image(ref.cmdbuf, ref.backbuffer_image, !i, !!i, !i, 1);
-		cmd_blit_image(ref.cmdbuf, ref.backbuffer_image, ref.layer[0].image, ScreenWidth, ScreenHeight, Width, Height);
-		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		set_image_memory_barrier(ref.cmdbuf, ref.layer[LayerMax - 1].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		cmd_blit_image(ref.cmdbuf, ref.backbuffer_image, ref.layer[LayerMax - 1].image, ScreenWidth, ScreenHeight, Width, Height);
+		set_image_memory_barrier(ref.cmdbuf, ref.layer[LayerMax - 1].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		vkEndCommandBuffer(ref.cmdbuf);
 	}
 
@@ -334,43 +327,61 @@ main(int argc, char *argv[])
 	uint64_t frame_count = 0;
 	uint64_t backbuffer_index = 0;
 	while (Update()) {
+		printf("GpuMemoryMax=%d MByte\n", GpuMemoryMax / 1024 / 1024);
+		printf("LocalMemRemain=%d MByte\n", (GpuMemoryMax - devmem_local_offset) / 1024 / 1024);
 		backbuffer_index = frame_count % FrameFifoMax;
-		uint32_t present_index = 0;
 		auto & ref = frame_info[backbuffer_index];
 		//test update
 		{
-			for (auto & layer : ref.layer) {
+			auto TEST_MAX = 256;
+			auto arg = ref.host_draw_indirect_cmd;
+			for (int i = 0 ; i < LayerMax - 1; i++) {
+				auto & layer = ref.layer[i];
 				ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
-				for (int i = 0 ; i < 32; i++) {
+				for (int i = 0 ; i < TEST_MAX; i++) {
 					p->pos[0] = frandom();
 					p->pos[1] = frandom();
-					p->scale[0] = 0.025;
-					p->scale[1] = 0.025;
+					p->scale[0] = 0.2;
+					p->scale[1] = 0.125;
 					p->rotate[0] = frandom() * 4.0;
 
 					p->color[0] = frand();
 					p->color[1] = frand();
 					p->color[2] = frand();
 					p->color[3] = 1.0;
+					p->metadata[0] = 1;
 					p++;
 				}
-				/*
-				auto arg = (VkDrawIndirectCommand *)layer.host_indirect_arg_buffer_addr;
-				arg->vertexCount = 32 * 6;
+				arg->vertexCount = TEST_MAX * 6;
 				arg->instanceCount = 1;
 				arg->firstVertex = 0;
 				arg->firstInstance = 0;
-				*/
+				arg++;
 			}
+			auto & layer = ref.layer[LayerMax - 1];
+			arg = &ref.host_draw_indirect_cmd[LayerMax - 1];
+			ObjectFormat *p = (ObjectFormat *)layer.host_memory_addr;
+			p->pos[0] = 0;
+			p->pos[1] = 0;
+			p->scale[0] = 1;
+			p->scale[1] = 1;
+			p->rotate[0] = 0;
+			p->metadata[0] = 1;
+			arg->vertexCount = 6;
+			arg->instanceCount = 1;
+			arg->firstVertex = 0;
+			arg->firstInstance = 0;
 		}
+		
+		//Submit Command.
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
+		uint32_t present_index = 0;
 		vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
-		printf("present_index=%d\n", present_index);
+		printf("SUBMIT : present_index=%d\n", present_index);
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
 		frame_count++;
-		Sleep(0);
 		if ((frame_count % 60) == 0) {
 			printf("frame_count=%lld\n", frame_count);
 		}

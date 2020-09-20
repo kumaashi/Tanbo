@@ -1,0 +1,35 @@
+
+glslangValidator -V -S comp --D _CS_ shaders/update_buffer.glsl -o shaders/update_buffer.glsl_CS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect0.glsl -o shaders/draw_rect0.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect0.glsl -o shaders/draw_rect0.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect1.glsl -o shaders/draw_rect1.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect1.glsl -o shaders/draw_rect1.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect2.glsl -o shaders/draw_rect2.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect2.glsl -o shaders/draw_rect2.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect3.glsl -o shaders/draw_rect3.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect3.glsl -o shaders/draw_rect3.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect4.glsl -o shaders/draw_rect4.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect4.glsl -o shaders/draw_rect4.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect5.glsl -o shaders/draw_rect5.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect5.glsl -o shaders/draw_rect5.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect6.glsl -o shaders/draw_rect6.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect6.glsl -o shaders/draw_rect6.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect7.glsl -o shaders/draw_rect7.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect7.glsl -o shaders/draw_rect7.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect0.glsl -o shaders/draw_rect0.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect0.glsl -o shaders/draw_rect0.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect1.glsl -o shaders/draw_rect1.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect1.glsl -o shaders/draw_rect1.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect2.glsl -o shaders/draw_rect2.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect2.glsl -o shaders/draw_rect2.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect3.glsl -o shaders/draw_rect3.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect3.glsl -o shaders/draw_rect3.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect4.glsl -o shaders/draw_rect4.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect4.glsl -o shaders/draw_rect4.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect5.glsl -o shaders/draw_rect5.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect5.glsl -o shaders/draw_rect5.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect6.glsl -o shaders/draw_rect6.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect6.glsl -o shaders/draw_rect6.glsl_PS_temp.spv
+glslangValidator -V -S vert --D _VS_ shaders/draw_rect7.glsl -o shaders/draw_rect7.glsl_VS_temp.spv
+glslangValidator -V -S frag --D _PS_ shaders/draw_rect7.glsl -o shaders/draw_rect7.glsl_PS_temp.spv
+
