@@ -681,8 +681,6 @@ create_descriptor_pool(
 	VkDescriptorPoolCreateInfo info = {};
 	std::vector<VkDescriptorPoolSize> vpoolsizes;
 
-	cnt = 0xFFFFF; //todo
-
 	vpoolsizes.push_back({VK_DESCRIPTOR_TYPE_SAMPLER, cnt});
 	vpoolsizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, cnt});
 	vpoolsizes.push_back({VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, cnt});

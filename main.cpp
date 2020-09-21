@@ -223,8 +223,8 @@ main(int argc, char *argv[])
 		VkShaderStageFlags shader_stages = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
 		vdesc_setlayout_binding_srv.push_back({0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DescriptorArrayMax, shader_stages, nullptr});
 		vdesc_setlayout_binding_cbv.push_back({0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, DescriptorArrayMax, shader_stages, nullptr});
-		vdesc_setlayout_binding_uav.push_back({0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ObjectMax, shader_stages, nullptr});
-		vdesc_setlayout_binding_uav.push_back({1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ObjectMax, shader_stages, nullptr});
+		vdesc_setlayout_binding_uav.push_back({0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
+		vdesc_setlayout_binding_uav.push_back({1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
 
 		vdescriptor_layouts.resize(RDT_SLOT_MAX);
 		vdescriptor_layouts[RDT_SLOT_SRV] = create_descriptor_set_layout(device, vdesc_setlayout_binding_srv);
@@ -282,6 +282,7 @@ main(int argc, char *argv[])
 			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 0, layer_num, layer.image_view, sampler);
 			update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 0, 0, layer.buffer, ObjectMaxBytes);
 			update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 1, 0, layer.vertex_buffer, VertexMaxBytes);
+
 			layer_num++;
 		}
 
@@ -313,6 +314,8 @@ main(int argc, char *argv[])
 			cmd_end_render_pass(ref.cmdbuf);
 			layer_num++;
 		}
+		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+		cmd_clear_image(ref.cmdbuf, ref.backbuffer_image, 0, 0, 0, 0);
 		set_image_memory_barrier(ref.cmdbuf, ref.layer[LayerMax - 1].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		set_image_memory_barrier(ref.cmdbuf, ref.backbuffer_image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		cmd_blit_image(ref.cmdbuf, ref.backbuffer_image, ref.layer[LayerMax - 1].image, ScreenWidth, ScreenHeight, Width, Height);
