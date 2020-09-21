@@ -92,7 +92,7 @@ void main()
 	basepos[3] += pos.xy;
 
 	//result
-	vec2 aspect = vec2(480.0 / 640.0, 1.0);
+	vec2 aspect = vec2(1.0, 1.0);
 	vtx[tid * 6 + 0].pos = vec4(basepos[0] * aspect, 0, 1);
 	vtx[tid * 6 + 1].pos = vec4(basepos[1] * aspect, 0, 1);
 	vtx[tid * 6 + 2].pos = vec4(basepos[2] * aspect, 0, 1);

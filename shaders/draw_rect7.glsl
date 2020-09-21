@@ -53,15 +53,15 @@ layout(location=0) out vec4 out_color;
 
 void main(){
 	vec2 uv = v_uv * 0.5 + 0.5;
-	out_color = vec4(0.0);
+	//out_color.xyz = vec3(0.0);
 	out_color.xyz += pow(texture(tex[0], uv).xyz, vec3(1.5));
-	out_color.xyz += pow(texture(tex[1], uv).xyz, vec3(1.5));
+	out_color.xyz -= pow(texture(tex[1], uv).xyz, vec3(1.5));
 	out_color.xyz += pow(texture(tex[2], uv).xyz, vec3(1.5));
-	out_color.xyz += pow(texture(tex[3], uv).xyz, vec3(1.5));
+	out_color.xyz -= pow(texture(tex[3], uv).xyz, vec3(1.5));
 	out_color.xyz += pow(texture(tex[4], uv).xyz, vec3(1.5));
-	out_color.xyz += pow(texture(tex[5], uv).xyz, vec3(1.5));
+	out_color.xyz -= pow(texture(tex[5], uv).xyz, vec3(1.5));
 	out_color.xyz += pow(texture(tex[6], uv).xyz, vec3(1.5));
-	out_color.a = 1.0;
 	out_color.xyz = vec3(1.0) - out_color.xyz;
+	out_color.a = 1.0;
 }
 #endif //_PS_

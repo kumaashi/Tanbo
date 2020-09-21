@@ -126,12 +126,12 @@ main(int argc, char *argv[])
 
 	enum {
 		ScreenWidth = 1024,
-		ScreenHeight = 768,
+		ScreenHeight = 1024,
 		FrameFifoMax = 2,
-		Width = 640,
-		Height = 480,
+		Width = 480,
+		Height = 640,
 		BitsSize = 4,
-		ImageSize = Width * Width * BitsSize,
+		ImageSize = Width * Height * BitsSize,
 		ObjectMax = 4096,
 		LayerMax = 8,
 		DescriptorArrayMax = 32,
