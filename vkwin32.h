@@ -249,12 +249,12 @@ inline uint32_t
 get_graphics_queue_index(VkPhysicalDevice gpudev)
 {
 	uint32_t ret = 0;
-	uint32_t queue_family_count = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &queue_family_count, nullptr);
-	std::vector<VkQueueFamilyProperties> vqueue_props(queue_family_count);
-	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &queue_family_count, vqueue_props.data());
-	for (uint32_t i = 0; i < queue_family_count; i++) {
-		auto flags = vqueue_props[i].queueFlags;
+	uint32_t cnt = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &cnt, nullptr);
+	std::vector<VkQueueFamilyProperties> temp(cnt);
+	vkGetPhysicalDeviceQueueFamilyProperties(gpudev, &cnt, temp.data());
+	for (uint32_t i = 0; i < cnt; i++) {
+		auto flags = temp[i].queueFlags;
 		if (flags & VK_QUEUE_GRAPHICS_BIT) {
 			ret = i;
 			break;
@@ -262,6 +262,31 @@ get_graphics_queue_index(VkPhysicalDevice gpudev)
 	}
 	return (ret);
 }
+
+[[ nodiscard ]]
+inline uint32_t
+get_buffer_memreq_size(VkDevice device, VkBuffer buffer)
+{
+	VkMemoryRequirements memreqs = {};
+
+	vkGetBufferMemoryRequirements(device, buffer, &memreqs);
+	memreqs.size = memreqs.size + (memreqs.alignment - 1);
+	memreqs.size &= ~(memreqs.alignment - 1);
+	return (memreqs.size);
+}
+
+[[ nodiscard ]]
+inline uint32_t
+get_image_memreq_size(VkDevice device, VkImage image)
+{
+	VkMemoryRequirements memreqs = {};
+
+	vkGetImageMemoryRequirements(device, image, &memreqs);
+	memreqs.size = memreqs.size + (memreqs.alignment - 1);
+	memreqs.size &= ~(memreqs.alignment - 1);
+	return (memreqs.size);
+}
+
 
 [[ nodiscard ]]
 inline VkSampler
