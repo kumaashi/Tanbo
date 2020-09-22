@@ -196,6 +196,7 @@ main(int argc, char *argv[])
 	cinfo.Height = 640;
 	cinfo.BitsSize = 4;
 	cinfo.LayerMax = 4;
+	cinfo.UserImageMax = 32;
 	cinfo.ObjectMax = 8192;
 	cinfo.DescriptorArrayMax = 32;
 	cinfo.GpuMemoryMax = 256 * 1024 * 1024;

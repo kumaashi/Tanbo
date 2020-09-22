@@ -51,12 +51,13 @@ struct vkcontext_t {
 		uint32_t BitsSize;
 		uint32_t ObjectMax;
 		uint32_t LayerMax;
+		uint32_t UserImageMax;
 		uint32_t DescriptorArrayMax;
 		uint32_t DescriptorPoolMax;
-		uint32_t DrawIndirectCommandSize;
 		uint64_t GpuMemoryMax;
 		uint64_t ObjectMaxBytes;
 		uint64_t VertexMaxBytes;
+		uint32_t DrawIndirectCommandSize;
 		std::vector<uint8_t> cs_update;
 		struct shader_layer_t {
 			std::vector<uint8_t> vs;
@@ -97,13 +98,6 @@ struct vkcontext_t {
 		std::vector<layer_t> layers;
 	};
 
-	enum {
-		RDT_SLOT_SRV = 0,
-		RDT_SLOT_CBV,
-		RDT_SLOT_UAV,
-		RDT_SLOT_MAX,
-	};
-
 	uint32_t graphics_queue_family_index = -1;
 	uint32_t gpu_count = 0;
 	VkPhysicalDevice gpudev = VK_NULL_HANDLE;
@@ -121,7 +115,9 @@ struct vkcontext_t {
 	uint64_t devmem_local_offset = 0;
 	VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 	VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSetLayout> vdescriptor_layouts;
+	VkDescriptorSetLayout descriptor_set_layout_srv = VK_NULL_HANDLE;
+	VkDescriptorSetLayout descriptor_set_layout_cbv = VK_NULL_HANDLE;
+	VkDescriptorSetLayout descriptor_set_layout_uav = VK_NULL_HANDLE;
 	VkRenderPass render_pass = VK_NULL_HANDLE;
 	VkPipeline cp_update_buffer = VK_NULL_HANDLE;
 	std::vector<VkPipeline> vgp_draw_rects;
@@ -134,9 +130,9 @@ struct vkcontext_t {
 	{
 		info = userinfo;
 		info.DescriptorPoolMax = info.LayerMax * info.DescriptorArrayMax;
-		info.DrawIndirectCommandSize = 4096;
 		info.ObjectMaxBytes = info.ObjectMax * sizeof(vkcontext_t::object_format);
 		info.VertexMaxBytes = info.ObjectMax * sizeof(vkcontext_t::vertex_format) * 6;
+		info.DrawIndirectCommandSize = 4096;
 		
 		frame_infos.resize(info.FrameFifoMax);
 		VkInstance inst = create_instance(info.appname);
@@ -197,15 +193,19 @@ struct vkcontext_t {
 			std::vector<VkDescriptorSetLayoutBinding> vdesc_setlayout_binding_cbv;
 			std::vector<VkDescriptorSetLayoutBinding> vdesc_setlayout_binding_uav;
 			VkShaderStageFlags shader_stages = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
-			vdesc_setlayout_binding_srv.push_back({0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.DescriptorArrayMax, shader_stages, nullptr});
+			vdesc_setlayout_binding_srv.push_back({0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.LayerMax, shader_stages, nullptr});
+			vdesc_setlayout_binding_srv.push_back({1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.UserImageMax, shader_stages, nullptr});
 			vdesc_setlayout_binding_cbv.push_back({0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, info.DescriptorArrayMax, shader_stages, nullptr});
 			vdesc_setlayout_binding_uav.push_back({0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
 			vdesc_setlayout_binding_uav.push_back({1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
-
-			vdescriptor_layouts.resize(RDT_SLOT_MAX);
-			vdescriptor_layouts[RDT_SLOT_SRV] = create_descriptor_set_layout(device, vdesc_setlayout_binding_srv);
-			vdescriptor_layouts[RDT_SLOT_CBV] = create_descriptor_set_layout(device, vdesc_setlayout_binding_cbv);
-			vdescriptor_layouts[RDT_SLOT_UAV] = create_descriptor_set_layout(device, vdesc_setlayout_binding_uav);
+			descriptor_set_layout_srv = create_descriptor_set_layout(device, vdesc_setlayout_binding_srv);
+			descriptor_set_layout_cbv = create_descriptor_set_layout(device, vdesc_setlayout_binding_cbv);
+			descriptor_set_layout_uav = create_descriptor_set_layout(device, vdesc_setlayout_binding_uav);
+			std::vector<VkDescriptorSetLayout> vdescriptor_layouts = {
+				descriptor_set_layout_srv,
+				descriptor_set_layout_cbv,
+				descriptor_set_layout_uav,
+			};
 			pipeline_layout = create_pipeline_layout(device, vdescriptor_layouts.data(), vdescriptor_layouts.size());
 		}
 		render_pass = create_render_pass(device, VK_FORMAT_R8G8B8A8_UNORM);
@@ -232,10 +232,10 @@ struct vkcontext_t {
 			vkMapMemory(device, ref.devmem_host_draw_indirect_cmd, 0, info.DrawIndirectCommandSize, 0, (void **)&ref.host_draw_indirect_cmd);
 
 			auto image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			ref.descriptor_set_srv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_SRV]);
-			ref.descriptor_set_cbv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_CBV]);
+			ref.descriptor_set_srv = create_descriptor_set(device, descriptor_pool, descriptor_set_layout_srv);
+			ref.descriptor_set_cbv = create_descriptor_set(device, descriptor_pool, descriptor_set_layout_cbv);
 			for (auto & layer : ref.layers) {
-				layer.descriptor_set_uav = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_UAV]);
+				layer.descriptor_set_uav = create_descriptor_set(device, descriptor_pool, descriptor_set_layout_uav);
 				layer.image = create_image(device, info.Width, info.Height, VK_FORMAT_R8G8B8A8_UNORM, image_usage_flags);
 				layer.buffer = create_buffer(device, info.ObjectMaxBytes);
 				layer.vertex_buffer = create_buffer(device, info.VertexMaxBytes);
