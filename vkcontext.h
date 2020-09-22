@@ -286,7 +286,7 @@ struct vkcontext_t {
 		}
 	}
 
-	void draw(uint32_t layer_index, uint32_t vertexCount)
+	void draw_triangles(uint32_t layer_index, uint32_t vertexCount)
 	{
 		auto & ref = frame_infos[backbuffer_index];
 		auto & arg = ref.host_draw_indirect_cmd[layer_index];

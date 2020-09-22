@@ -242,7 +242,7 @@ main(int argc, char *argv[])
 				p->color[3] = 1.0;
 				p++;
 			}
-			ctx.draw(i, cinfo.ObjectMax * 6);
+			ctx.draw_triangles(i, cinfo.ObjectMax * 6);
 		}
 		auto last_index = cinfo.LayerMax - 1;
 		auto p = ctx.get_object_format_address(last_index);
@@ -252,7 +252,8 @@ main(int argc, char *argv[])
 		p->scale[1] = 1;
 		p->rotate[0] = 0;
 		p->metadata[0] = 1;
-		ctx.draw(last_index, 6);
+
+		ctx.draw_triangles(last_index, 6);
 		ctx.submit();
 
 		frame_count++;
