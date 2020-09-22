@@ -121,7 +121,7 @@ struct vkcontext_t {
 		vkBindImageMemory(device, uimg.image, uimg.devmem_image, 0);
 		vkBindBufferMemory(device, uimg.buffer, uimg.devmem_buffer, 0);
 
-		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 		for (int i = 0 ; i < info.FrameFifoMax; i++) {
 			auto & ref = vframe_infos[i];
 			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 1, slot, uimg.image_view, sampler);

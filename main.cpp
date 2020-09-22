@@ -219,39 +219,62 @@ main(int argc, char *argv[])
 		std::vector<uint32_t> testtex;
 		for (int y = 0; y < 256; y++) {
 			for (int x = 0; x < 256; x++) {
+				uint8_t a = x ^ y;
 				testtex.push_back(x ^ y);
 			}
 		}
 		ctx.upload_user_image(0, 256, 256, testtex.data());
+		ctx.upload_user_image(1, 256, 256, testtex.data());
 	}
 	ctx.create_cmdbuf();
 
 	printf("START\n");
 	uint64_t frame_count = 0;
 	double phase = 0.0;
+	static int tex_id = 20;
 	while (window_update()) {
+		if(GetAsyncKeyState(VK_DOWN) & 0x0001) {
+			tex_id--;
+			if(tex_id < 0)
+				tex_id = 0;
+		}
+		if(GetAsyncKeyState(VK_UP) & 0x0001) {
+			tex_id++;
+		}
+		
 		phase += 0.01;
 		srand(0);
+		auto ObjectCount = 8192;
 		for (int i = 0 ; i < cinfo.LayerMax - 1; i++) {
 			auto p = ctx.get_object_format_address(i);
-			for (int i = 0 ; i < cinfo.ObjectMax; i++) {
+			for (int i = 0 ; i < ObjectCount; i++) {
 				p->metadata[0] = 1;
 				p->pos[0] = cos(3 * cos(123.0f * frandom() + frandom() * phase * 2.0 * 0.05));
 				p->pos[1] = cos(3 * sin(456.0f * frandom() + frandom() * phase * 3.0 * 0.05));
-				p->scale[0] = 0.05 + frand() * 0.05;
-				p->scale[1] = 0.05 + frand() * 0.05;
+				p->scale[0] = 0.005 + frand() * 0.05;
+				p->scale[1] = 0.001 + frand() * 0.05;
 				p->rotate[0] = frandom() * 10.0 + phase * 5.0;
 				p->color[0] = frand();
 				p->color[1] = frand();
 				p->color[2] = frand();
 				p->color[3] = 1.0;
+				
+				//for test 8x8 tex
+				p->uvinfo[0] = tex_id % 8;
+				p->uvinfo[1] = tex_id / 8;
+				p->uvinfo[2] = 8;
+				p->uvinfo[3] = 8;
+				
+				//all
 				p->uvinfo[0] = 0;
 				p->uvinfo[1] = 0;
 				p->uvinfo[2] = 1;
 				p->uvinfo[3] = 1;
+				
+				
 				p++;
 			}
-			ctx.draw_triangles(i, cinfo.ObjectMax * 6);
+			ctx.draw_triangles(i, ObjectCount * 6);
 		}
 		auto last_index = cinfo.LayerMax - 1;
 		auto p = ctx.get_object_format_address(last_index);
