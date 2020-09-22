@@ -75,7 +75,8 @@ bind_debug_fn(
 {
 	VkDebugReportCallbackEXT callback = NULL;
 	auto cb = PFN_vkCreateDebugReportCallbackEXT(
-			vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+			vkGetInstanceProcAddr(instance,
+				"vkCreateDebugReportCallbackEXT"));
 
 	if (cb)
 		cb(instance, &ext, nullptr, &callback);
@@ -100,42 +101,43 @@ create_instance(const char *appname)
 	};
 	VkInstance inst = VK_NULL_HANDLE;
 	VkApplicationInfo vkapp = {};
-	VkInstanceCreateInfo inst_info = {};
+	VkInstanceCreateInfo info = {};
 	vkapp.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 
 #ifdef VKWIN32_DEBUG
-	VkDebugReportCallbackCreateInfoEXT drcc_info = {};
-	vkapp.pNext = &drcc_info;
+	VkDebugReportCallbackCreateInfoEXT dbg_info = {};
+	vkapp.pNext = &dbg_info;
 #endif //VKWIN32_DEBUG
 	vkapp.pApplicationName = appname;
 	vkapp.pEngineName = appname;
 	vkapp.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
 	vkapp.apiVersion = VK_API_VERSION_1_0;
-	inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	inst_info.pNext = NULL;
-	inst_info.pApplicationInfo = &vkapp;
-	inst_info.enabledExtensionCount = (uint32_t)_countof(vinstance_ext_names);
-	inst_info.ppEnabledExtensionNames = vinstance_ext_names;
+	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	info.pNext = NULL;
+	info.pApplicationInfo = &vkapp;
+	info.enabledExtensionCount = (uint32_t)_countof(vinstance_ext_names);
+	info.ppEnabledExtensionNames = vinstance_ext_names;
 #ifdef VKWIN32_DEBUG
 	static const char *debuglayers[] = {
 		"VK_LAYER_KHRONOS_validation",
 	};
-	inst_info.enabledLayerCount = _countof(debuglayers);
-	inst_info.ppEnabledLayerNames = debuglayers;
+	info.enabledLayerCount = _countof(debuglayers);
+	info.ppEnabledLayerNames = debuglayers;
 
-	drcc_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-	drcc_info.flags = 0;
-	drcc_info.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
-	drcc_info.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-	drcc_info.pfnCallback = &vk_callback_printf;
+	dbg_info.sType =
+		VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	dbg_info.flags = 0;
+	dbg_info.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
+	dbg_info.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	dbg_info.flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+	dbg_info.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+	dbg_info.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+	dbg_info.pfnCallback = &vk_callback_printf;
 #endif //VKWIN32_DEBUG
-	auto err = vkCreateInstance(&inst_info, NULL, &inst);
+	auto err = vkCreateInstance(&info, NULL, &inst);
 
 #ifdef VKWIN32_DEBUG
-	bind_debug_fn(inst, drcc_info);
+	bind_debug_fn(inst, dbg_info);
 #endif //VKWIN32_DEBUG
 
 	return inst;
