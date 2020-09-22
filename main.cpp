@@ -215,6 +215,16 @@ main(int argc, char *argv[])
 	cinfo.hwnd = init_window(cinfo.appname, cinfo.ScreenW, cinfo.ScreenH);
 	cinfo.hinst = GetModuleHandle(NULL);
 	ctx.init(cinfo);
+	{
+		std::vector<uint32_t> testtex;
+		for (int y = 0; y < 256; y++) {
+			for (int x = 0; x < 256; x++) {
+				testtex.push_back(x ^ y);
+			}
+		}
+		ctx.upload_user_image(0, 256, 256, testtex.data());
+	}
+	ctx.create_cmdbuf();
 
 	printf("START\n");
 	uint64_t frame_count = 0;

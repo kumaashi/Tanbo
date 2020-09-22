@@ -23,6 +23,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(set=0, binding=0) uniform sampler2D tex[];
+layout(set=0, binding=1) uniform sampler2D tex_user[];
 
 #ifdef _VS_
 layout(location=0) in vec4 position;
@@ -57,6 +58,8 @@ void main(){
 	out_color.xyz += texture(tex[0], uv).xyz;
 	out_color.xyz += texture(tex[1], uv).xyz;
 	out_color.xyz += texture(tex[2], uv).xyz;
+	out_color.xyz += texture(tex_user[0], uv).xyz;
+	
 	out_color.xyz = clamp(vec3(1.0) - out_color.xyz, vec3(0.0), vec3(1.0));
 	out_color.a = 1.0;
 }

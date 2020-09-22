@@ -934,6 +934,25 @@ update_descriptor_sets(
 }
 
 inline void
+map_and_copy_devmem(
+	VkDevice device,
+	VkDeviceMemory devmem,
+	VkDeviceSize start,
+	VkDeviceSize size,
+	void *data)
+{
+	void *dest = nullptr;
+	vkMapMemory(device, devmem, start, size, 0, (void **)&dest);
+	if (dest) {
+		memcpy(dest, data, size);
+		vkUnmapMemory(device, devmem);
+	} else {
+		printf("failed map : devmem=%p\n", devmem);
+		exit(1);
+	}
+}
+
+inline void
 update_descriptor_combined_image_sample(
 	VkDevice device,
 	VkDescriptorSet dset,

@@ -97,18 +97,56 @@ struct vkcontext_t {
 		};
 		std::vector<layer_t> layers;
 	};
-	
+
 	struct user_image_t {
+		bool is_submitted = false;
 		VkImageCreateInfo info;
 		VkImage image = VK_NULL_HANDLE;
 		VkImageView image_view = VK_NULL_HANDLE;
+		VkDeviceMemory devmem_image = VK_NULL_HANDLE;
+
+		VkBuffer buffer = VK_NULL_HANDLE;
+		VkDeviceMemory devmem_buffer = VK_NULL_HANDLE;
+		VkCommandBuffer transfer_cmdbuf = VK_NULL_HANDLE;
 	};
-	std::vector<user_image_t> vuser_images;
-	void upload_user_image(uint32_t slot, uint32_t width, uint32_t height, void *dword_data) {
+
+	void upload_user_image(uint32_t slot, uint32_t width, uint32_t height, void *src)
+	{
+		VkDeviceSize size = width * height * sizeof(uint32_t);
 		user_image_t uimg = {};
-		auto image_usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		uimg.image = create_image(device, width, height, VK_FORMAT_R8G8B8A8_UNORM, image_usage_flags, &uimg.info);
+		uimg.image = create_image(device, width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &uimg.info);
+		uimg.buffer = create_buffer(device, size);
+		uimg.devmem_image = alloc_device_memory(gpudev, device, size, false);
+		uimg.devmem_buffer = alloc_device_memory(gpudev, device, size, true);
+		vkBindImageMemory(device, uimg.image, uimg.devmem_image, 0);
+		vkBindBufferMemory(device, uimg.buffer, uimg.devmem_buffer, 0);
+
 		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+		for (int i = 0 ; i < info.FrameFifoMax; i++) {
+			auto & ref = vframe_infos[i];
+			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 1, slot, uimg.image_view, sampler);
+		}
+
+		map_and_copy_devmem(device, uimg.devmem_buffer, 0, size, src);
+		VkBufferImageCopy copy_region = {};
+		copy_region.bufferOffset = 0;
+		copy_region.bufferRowLength = width;
+		copy_region.bufferImageHeight = height;
+		copy_region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+		copy_region.imageOffset = {0, 0, 0};
+		copy_region.imageExtent = {width, height, 1};
+
+		uimg.transfer_cmdbuf = create_command_buffer(device, cmd_pool);
+		vkResetCommandBuffer(uimg.transfer_cmdbuf, 0);
+		VkCommandBufferBeginInfo cmdbegininfo = {};
+		cmdbegininfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		cmdbegininfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		vkBeginCommandBuffer(uimg.transfer_cmdbuf, &cmdbegininfo);
+		set_image_memory_barrier(uimg.transfer_cmdbuf, uimg.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		vkCmdCopyBufferToImage(uimg.transfer_cmdbuf, uimg.buffer, uimg.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+		set_image_memory_barrier(uimg.transfer_cmdbuf, uimg.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+		vkEndCommandBuffer(uimg.transfer_cmdbuf);
+		vuser_images.push_back(uimg);
 	}
 
 	uint32_t graphics_queue_family_index = -1;
@@ -134,7 +172,8 @@ struct vkcontext_t {
 	VkRenderPass render_pass = VK_NULL_HANDLE;
 	VkPipeline cp_update_buffer = VK_NULL_HANDLE;
 	std::vector<VkPipeline> vgp_draw_rects;
-	std::vector<frame_info_t> frame_infos;
+	std::vector<frame_info_t> vframe_infos;
+	std::vector<user_image_t> vuser_images;
 
 	uint64_t devmem_local_offset = 0;
 	uint64_t backbuffer_index = 0;
@@ -147,8 +186,8 @@ struct vkcontext_t {
 		info.ObjectMaxBytes = info.ObjectMax * sizeof(vkcontext_t::object_format);
 		info.VertexMaxBytes = info.ObjectMax * sizeof(vkcontext_t::vertex_format) * 6;
 		info.DrawIndirectCommandSize = 4096;
-		
-		frame_infos.resize(info.FrameFifoMax);
+
+		vframe_infos.resize(info.FrameFifoMax);
 		VkInstance inst = create_instance(info.appname);
 		auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
 		err = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpudev);
@@ -231,7 +270,7 @@ struct vkcontext_t {
 		}
 
 		for (int i = 0 ; i < info.FrameFifoMax; i++) {
-			auto & ref = frame_infos[i];
+			auto & ref = vframe_infos[i];
 			ref.layers.resize(info.LayerMax);
 			uint8_t *temp_addr = nullptr;
 			ref.backbuffer_image = temp[i];
@@ -273,7 +312,13 @@ struct vkcontext_t {
 				update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 0, 0, layer.buffer, info.ObjectMaxBytes);
 				update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 1, 0, layer.vertex_buffer, info.VertexMaxBytes);
 			}
+		}
+	}
 
+	void create_cmdbuf()
+	{
+		for (int i = 0 ; i < info.FrameFifoMax; i++) {
+			auto & ref = vframe_infos[i];
 			ref.cmdbuf = create_command_buffer(device, cmd_pool);
 			vkResetCommandBuffer(ref.cmdbuf, 0);
 			VkCommandBufferBeginInfo cmdbegininfo = {};
@@ -313,9 +358,10 @@ struct vkcontext_t {
 			vkEndCommandBuffer(ref.cmdbuf);
 		}
 	}
+
 	void draw_triangles(uint32_t layer_index, uint32_t vertexCount)
 	{
-		auto & ref = frame_infos[backbuffer_index];
+		auto & ref = vframe_infos[backbuffer_index];
 		auto & arg = ref.host_draw_indirect_cmd[layer_index];
 		arg.vertexCount = vertexCount;
 		arg.instanceCount = 1;
@@ -325,7 +371,7 @@ struct vkcontext_t {
 
 	object_format *get_object_format_address(uint32_t layer_index)
 	{
-		auto & ref = frame_infos[backbuffer_index];
+		auto & ref = vframe_infos[backbuffer_index];
 		auto & layer = ref.layers[layer_index];
 		return (vkcontext_t::object_format *)layer.host_memory_addr;
 	}
@@ -333,7 +379,7 @@ struct vkcontext_t {
 	int submit()
 	{
 		int ret = 0;
-		auto & ref = frame_infos[backbuffer_index];
+		auto & ref = vframe_infos[backbuffer_index];
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
 		uint32_t present_index = 0;
@@ -351,12 +397,19 @@ struct vkcontext_t {
 			printf("VK_ERROR_SURFACE_LOST_KHR\n");
 		if (err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
 			printf("VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT\n");
-
-		submit_command(device, {ref.cmdbuf}, graphics_queue, ref.fence, ref.sem);
+		std::vector<VkCommandBuffer> vcmdbuf;
+		for (auto & uimg : vuser_images) {
+			if (uimg.is_submitted == true)
+				continue;
+			vcmdbuf.push_back(uimg.transfer_cmdbuf);
+			uimg.is_submitted = true;
+		}
+		vcmdbuf.push_back(ref.cmdbuf);
+		submit_command(device, vcmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
 
 		frame_count++;
-		backbuffer_index = frame_count % frame_infos.size();
+		backbuffer_index = frame_count % vframe_infos.size();
 
 		return (ret);
 	}
