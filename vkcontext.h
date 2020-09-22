@@ -133,6 +133,11 @@ struct vkcontext_t {
 	void init(create_info & userinfo)
 	{
 		info = userinfo;
+		info.DescriptorPoolMax = info.LayerMax * info.DescriptorArrayMax;
+		info.DrawIndirectCommandSize = 4096;
+		info.ObjectMaxBytes = info.ObjectMax * sizeof(vkcontext_t::object_format);
+		info.VertexMaxBytes = info.ObjectMax * sizeof(vkcontext_t::vertex_format) * 6;
+		
 		frame_infos.resize(info.FrameFifoMax);
 		VkInstance inst = create_instance(info.appname);
 		auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);

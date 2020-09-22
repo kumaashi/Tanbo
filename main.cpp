@@ -198,11 +198,7 @@ main(int argc, char *argv[])
 	cinfo.LayerMax = 4;
 	cinfo.ObjectMax = 8192;
 	cinfo.DescriptorArrayMax = 32;
-	cinfo.DescriptorPoolMax = cinfo.LayerMax * cinfo.DescriptorArrayMax;
-	cinfo.DrawIndirectCommandSize = 256;
 	cinfo.GpuMemoryMax = 256 * 1024 * 1024;
-	cinfo.ObjectMaxBytes = cinfo.ObjectMax * sizeof(vkcontext_t::object_format);
-	cinfo.VertexMaxBytes = cinfo.ObjectMax * sizeof(vkcontext_t::vertex_format) * 6;
 
 	std::string shaderpath = "./shaders/";
 	compile_glsl2spirv(shaderpath + "update_buffer.glsl", "_CS_", cinfo.cs_update);
