@@ -63,6 +63,7 @@ struct vkcontext_t {
 		};
 		std::vector<shader_layer_t> shader_layers;
 	};
+	create_info info = {};
 
 	struct frame_info_t {
 		VkImage backbuffer_image = VK_NULL_HANDLE;
@@ -128,8 +129,9 @@ struct vkcontext_t {
 	uint64_t backbuffer_index = 0;
 	uint64_t frame_count = 0;
 
-	void init(create_info & info)
+	void init(create_info & userinfo)
 	{
+		info = userinfo;
 		frame_infos.resize(info.FrameFifoMax);
 		VkInstance inst = create_instance(info.appname);
 		auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
@@ -164,6 +166,11 @@ struct vkcontext_t {
 
 		graphics_queue_family_index = get_graphics_queue_index(gpudev);
 		device = create_device(gpudev, graphics_queue_family_index);
+
+		create_resources();
+	}
+
+	void create_resources() {
 		cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 		swapchain = create_swapchain(device, surface, info.ScreenW, info.ScreenH, info.FrameFifoMax);
 		sampler = create_sampler(device, true);
@@ -285,7 +292,6 @@ struct vkcontext_t {
 			vkEndCommandBuffer(ref.cmdbuf);
 		}
 	}
-
 	void draw_triangles(uint32_t layer_index, uint32_t vertexCount)
 	{
 		auto & ref = frame_infos[backbuffer_index];

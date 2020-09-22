@@ -195,8 +195,8 @@ main(int argc, char *argv[])
 	cinfo.Width = 480;
 	cinfo.Height = 640;
 	cinfo.BitsSize = 4;
-	cinfo.LayerMax = 4;
-	cinfo.ObjectMax = 4096;
+	cinfo.LayerMax = 3;
+	cinfo.ObjectMax = 32768;
 	cinfo.DescriptorArrayMax = 32;
 	cinfo.DescriptorPoolMax = cinfo.LayerMax * cinfo.DescriptorArrayMax;
 	cinfo.DrawIndirectCommandSize = 256;
@@ -231,11 +231,11 @@ main(int argc, char *argv[])
 			auto p = ctx.get_object_format_address(i);
 			for (int i = 0 ; i < cinfo.ObjectMax; i++) {
 				p->metadata[0] = 1;
-				p->pos[0] = cos(123.0f * frandom() + phase * 2.0);
-				p->pos[1] = sin(456.0f * frandom() + phase * 3.0);
-				p->scale[0] = 0.25 + frand() * 0.1;
-				p->scale[1] = 0.05 + frand() * 0.1;
-				p->rotate[0] = frandom() * 4.0 + phase;
+				p->pos[0] = cos(3 * cos(123.0f * frandom() + frandom() * phase * 2.0 * 0.05));
+				p->pos[1] = cos(3 * sin(456.0f * frandom() + frandom() * phase * 3.0 * 0.05));
+				p->scale[0] = 0.01 + frand() * 0.05;
+				p->scale[1] = 0.01 + frand() * 0.05;
+				p->rotate[0] = frandom() * 10.0 + phase * 5.0;
 				p->color[0] = frand();
 				p->color[1] = frand();
 				p->color[2] = frand();
