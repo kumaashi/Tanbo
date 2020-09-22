@@ -41,82 +41,6 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
-inline void
-fork_process_wait(
-	const char *command)
-{
-	PROCESS_INFORMATION pi;
-
-	STARTUPINFO si = {};
-	si.cb = sizeof(si);
-	auto ret = CreateProcess(
-			NULL, (LPTSTR)command,
-			NULL, NULL, FALSE,
-			NORMAL_PRIORITY_CLASS, NULL, NULL, &si, &pi);
-	if (!ret) {
-		printf("failed command:\n%s\n\n", command);
-		return;
-	}
-	while (WaitForSingleObject(pi.hProcess, 0) != WAIT_OBJECT_0) {
-		Sleep(1);
-	}
-}
-
-inline void
-compile_glsl2spirv(
-	std::string shaderfile,
-	std::string type,
-	std::vector<unsigned char> &vdata)
-{
-	auto tempfilename = shaderfile + type + std::string("temp.spv");
-	auto basecmd = std::string("glslangValidator -V -S ");
-	auto soption = std::string("null");
-	/*
-		.vert   for a vertex shader
-		.tesc   for a tessellation control shader
-		.tese   for a tessellation evaluation shader
-		.geom   for a geometry shader
-		.frag   for a fragment shader
-		.comp   for a compute shader
-		.mesh   for a mesh shader
-		.task   for a task shader
-		.rgen    for a ray generation shader
-		.rint    for a ray intersection shader
-		.rahit   for a ray any hit shader
-		.rchit   for a ray closest hit shader
-		.rmiss   for a ray miss shader
-		.rcall   for a ray callable shader
-	*/
-
-	if (type == "_VS_")
-		soption = "vert";
-	if (type == "_GS_")
-		soption = "geom";
-	if (type == "_PS_")
-		soption = "frag";
-	if (type == "_CS_")
-		soption = "comp";
-
-	basecmd += soption;
-	basecmd += " --D " + type + " " + shaderfile + " -o " + tempfilename;
-	printf("spawncmd : %s\n", basecmd.c_str());
-
-	fork_process_wait((char *)basecmd.c_str());
-	{
-		FILE *fp = fopen(tempfilename.c_str(), "rb");
-		if (fp) {
-			fseek(fp, 0, SEEK_END);
-			vdata.resize(ftell(fp));
-			fseek(fp, 0, SEEK_SET);
-			if (vdata.size() > 0)
-				fread(vdata.data(), 1, vdata.size(), fp);
-			fclose(fp);
-		}
-	}
-	DeleteFile(tempfilename.c_str());
-}
-
-
 #ifdef VKWIN32_DEBUG
 static VKAPI_ATTR VkBool32
 VKAPI_CALL vk_callback_printf(
@@ -802,18 +726,15 @@ create_shader_module(
 
 [[ nodiscard ]]
 inline VkPipeline
-create_cpipeline_from_file(
+create_cpipeline(
 	VkDevice device,
-	const char *filename,
-	VkPipelineLayout pipeline_layout)
+	VkPipelineLayout pipeline_layout,
+	std::vector<uint8_t> & cs)
 {
 	VkPipeline ret = nullptr;
 	VkComputePipelineCreateInfo info = {};
-	std::vector<uint8_t> cs;
 	std::vector<VkShaderModule> vshadermodules;
-	auto fname = std::string(filename);
 
-	compile_glsl2spirv((fname + ".glsl").c_str(), "_CS_", cs);
 	if (cs.empty())
 		return VK_NULL_HANDLE;
 
@@ -826,7 +747,6 @@ create_cpipeline_from_file(
 	info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	info.layout = pipeline_layout;
 	vkCreateComputePipelines(device, nullptr, 1, &info, nullptr, &ret);
-
 	for (auto & modules : vshadermodules)
 		if (modules)
 			vkDestroyShaderModule(device, modules, nullptr);
@@ -836,11 +756,12 @@ create_cpipeline_from_file(
 
 [[ nodiscard ]]
 inline VkPipeline
-create_gpipeline_from_file(
+create_gpipeline(
 	VkDevice device,
-	const char *filename,
 	VkPipelineLayout pipeline_layout,
-	VkRenderPass render_pass)
+	VkRenderPass render_pass,
+	std::vector<uint8_t> & vs,
+	std::vector<uint8_t> & ps)
 {
 	VkPipeline ret = nullptr;
 	VkPipelineCacheCreateInfo pipelineCache = {};
@@ -922,19 +843,13 @@ create_gpipeline_from_file(
 	std::vector<VkPipelineShaderStageCreateInfo> vsstageinfo;
 	std::vector<VkShaderModule> vshadermodules;
 
-	std::vector<uint8_t> vs;
-	std::vector<uint8_t> ps;
-	auto fname = std::string(filename);
-	compile_glsl2spirv((fname + ".glsl").c_str(), "_VS_", vs);
-	compile_glsl2spirv((fname + ".glsl").c_str(), "_PS_", ps);
-
 	VkPipelineShaderStageCreateInfo sstage = {};
 	sstage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	sstage.pName = "main"; //glsl spec
 
 	if (!vs.empty()) {
 		auto module = create_shader_module(
-				device, vs.data(), vs.size());
+			device, vs.data(), vs.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		sstage.module = module;
@@ -942,7 +857,7 @@ create_gpipeline_from_file(
 	}
 	if (!ps.empty()) {
 		auto module = create_shader_module(
-				device, ps.data(), ps.size());
+			device, ps.data(), ps.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		sstage.module = module;
@@ -973,11 +888,6 @@ create_gpipeline_from_file(
 	vi.vertexAttributeDescriptionCount = via_desc.size();
 	vi.pVertexAttributeDescriptions = via_desc.data();
 
-	//Create Pipeline
-	if (vsstageinfo.empty()) {
-		printf("failed create pipeline fname=%s\n", fname.c_str());
-		return nullptr;
-	}
 	VkGraphicsPipelineCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	info.layout = pipeline_layout;
@@ -993,7 +903,7 @@ create_gpipeline_from_file(
 	info.pDynamicState = &dyns;
 	info.renderPass = render_pass;
 	auto pipeline_result = vkCreateGraphicsPipelines(
-			device, nullptr, 1, &info, NULL, &ret);
+		device, nullptr, 1, &info, NULL, &ret);
 	for (auto & module : vshadermodules)
 		if (module)
 			vkDestroyShaderModule(device, module, nullptr);

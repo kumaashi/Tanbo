@@ -55,13 +55,5 @@ void main(){
 	float rr = length(v_uv);
 	float k = (1.0 / rr) - 1.0;
 	out_color = v_color * k * 0.1;
-	out_color += texture(tex[0], v_uv);
-	out_color += texture(tex[1], v_uv);
-	out_color += texture(tex[2], v_uv);
-	out_color += texture(tex[3], v_uv);
-	out_color += texture(tex[4], v_uv);
-	out_color += texture(tex[5], v_uv);
-	out_color += texture(tex[6], v_uv);
-	out_color += texture(tex[7], v_uv);
 }
 #endif //_PS_
