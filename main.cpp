@@ -223,54 +223,37 @@ main(int argc, char *argv[])
 	printf("START\n");
 	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	uint64_t frame_count = 0;
-	uint64_t backbuffer_index = 0;
 	double phase = 0.0;
 	while (window_update()) {
 		phase += 0.01;
-		backbuffer_index = frame_count % cinfo.FrameFifoMax;
-		auto & ref = ctx.frame_infos[backbuffer_index];
-		//test update
-		{
-			srand(0);
-			auto arg = ref.host_draw_indirect_cmd;
-			for (int i = 0 ; i < cinfo.LayerMax - 1; i++) {
-				auto & layer = ref.layers[i];
-				vkcontext_t::object_format *p = (vkcontext_t::object_format *)layer.host_memory_addr;
-				for (int i = 0 ; i < cinfo.ObjectMax; i++) {
-					p->metadata[0] = 1;
-					p->pos[0] = cos(123.0f * frandom() + phase * 2.0);
-					p->pos[1] = sin(456.0f * frandom() + phase * 3.0);
-					p->scale[0] = 0.25;
-					p->scale[1] = 0.05;
-					p->rotate[0] = frandom() * 4.0 + phase;
-
-					p->color[0] = frand();
-					p->color[1] = frand();
-					p->color[2] = frand();
-					p->color[3] = 1.0;
-					p++;
-				}
-				arg->vertexCount = cinfo.ObjectMax * 6;
-				arg->instanceCount = 1;
-				arg->firstVertex = 0;
-				arg->firstInstance = 0;
-				arg++;
+		srand(0);
+		for (int i = 0 ; i < cinfo.LayerMax - 1; i++) {
+			auto p = ctx.get_object_format_address(i);
+			for (int i = 0 ; i < cinfo.ObjectMax; i++) {
+				p->metadata[0] = 1;
+				p->pos[0] = cos(123.0f * frandom() + phase * 2.0);
+				p->pos[1] = sin(456.0f * frandom() + phase * 3.0);
+				p->scale[0] = 0.25 + frand() * 0.1;
+				p->scale[1] = 0.05 + frand() * 0.1;
+				p->rotate[0] = frandom() * 4.0 + phase;
+				p->color[0] = frand();
+				p->color[1] = frand();
+				p->color[2] = frand();
+				p->color[3] = 1.0;
+				p++;
 			}
-			auto & layer = ref.layers[cinfo.LayerMax - 1];
-			arg = &ref.host_draw_indirect_cmd[cinfo.LayerMax - 1];
-			vkcontext_t::object_format *p = (vkcontext_t::object_format *)layer.host_memory_addr;
-			p->pos[0] = 0;
-			p->pos[1] = 0;
-			p->scale[0] = 1;
-			p->scale[1] = 1;
-			p->rotate[0] = 0;
-			p->metadata[0] = 1;
-			arg->vertexCount = 6;
-			arg->instanceCount = 1;
-			arg->firstVertex = 0;
-			arg->firstInstance = 0;
+			ctx.draw(i, cinfo.ObjectMax * 6);
 		}
-		ctx.submit(backbuffer_index);
+		auto last_index = cinfo.LayerMax - 1;
+		auto p = ctx.get_object_format_address(last_index);
+		p->pos[0] = 0;
+		p->pos[1] = 0;
+		p->scale[0] = 1;
+		p->scale[1] = 1;
+		p->rotate[0] = 0;
+		p->metadata[0] = 1;
+		ctx.draw(last_index, 6);
+		ctx.submit();
 
 		frame_count++;
 		if ((frame_count % 60) == 0) {

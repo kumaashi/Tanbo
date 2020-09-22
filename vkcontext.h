@@ -125,6 +125,9 @@ struct vkcontext_t {
 	std::vector<VkPipeline> vgp_draw_rects;
 	std::vector<frame_info_t> frame_infos;
 
+	uint64_t backbuffer_index = 0;
+	uint64_t frame_count = 0;
+
 	void init(create_info & info)
 	{
 		frame_infos.resize(info.FrameFifoMax);
@@ -283,10 +286,27 @@ struct vkcontext_t {
 		}
 	}
 
-	int submit(uint32_t index)
+	void draw(uint32_t layer_index, uint32_t vertexCount)
+	{
+		auto & ref = frame_infos[backbuffer_index];
+		auto & arg = ref.host_draw_indirect_cmd[layer_index];
+		arg.vertexCount = vertexCount;
+		arg.instanceCount = 1;
+		arg.firstVertex = 0;
+		arg.firstInstance = 0;
+	}
+
+	object_format *get_object_format_address(uint32_t layer_index)
+	{
+		auto & ref = frame_infos[backbuffer_index];
+		auto & layer = ref.layers[layer_index];
+		return (vkcontext_t::object_format *)layer.host_memory_addr;
+	}
+
+	int submit()
 	{
 		int ret = 0;
-		auto & ref = frame_infos[index];
+		auto & ref = frame_infos[backbuffer_index];
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
 		uint32_t present_index = 0;
@@ -307,6 +327,9 @@ struct vkcontext_t {
 
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
+
+		frame_count++;
+		backbuffer_index = frame_count % frame_infos.size();
 
 		return (ret);
 	}
