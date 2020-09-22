@@ -262,15 +262,31 @@ struct vkcontext_t {
 		}
 	}
 
-	void submit(uint32_t index)
+	int submit(uint32_t index)
 	{
+		int ret = 0;
 		auto & ref = frame_infos[index];
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);
 		uint32_t present_index = 0;
-		vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
-		//printf("SUBMIT : present_index=%d\r", present_index);
+
+		auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
+		if(err == VK_ERROR_OUT_OF_HOST_MEMORY)
+			printf("VK_ERROR_OUT_OF_HOST_MEMORY\n");
+		if(err == VK_ERROR_OUT_OF_DEVICE_MEMORY)
+			printf("VK_ERROR_OUT_OF_DEVICE_MEMORY\n");
+		if(err == VK_ERROR_DEVICE_LOST)
+			printf("VK_ERROR_DEVICE_LOST\n");
+		if(err == VK_ERROR_OUT_OF_DATE_KHR) {
+			printf("VK_ERROR_OUT_OF_DATE_KHR\n");
+		if(err == VK_ERROR_SURFACE_LOST_KHR)
+			printf("VK_ERROR_SURFACE_LOST_KHR\n");
+		if(err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+			printf("VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT\n");
+
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
+
+		return (ret);
 	}
 };
