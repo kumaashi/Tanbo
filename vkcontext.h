@@ -100,10 +100,11 @@ struct vkcontext_t {
 
 	uint32_t graphics_queue_family_index = -1;
 	uint32_t gpu_count = 0;
-	VkPhysicalDevice gpudev = VK_NULL_HANDLE;
-	VkInstance inst = VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties gpu_props = {};
 	VkBool32 presentSupport = false;
+
+	VkInstance inst = VK_NULL_HANDLE;
+	VkPhysicalDevice gpudev = VK_NULL_HANDLE;
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 	VkDevice device = VK_NULL_HANDLE;
 	VkCommandPool cmd_pool = VK_NULL_HANDLE;
@@ -112,7 +113,6 @@ struct vkcontext_t {
 	VkSampler sampler = VK_NULL_HANDLE;
 	VkDeviceMemory devmem_host = VK_NULL_HANDLE;
 	VkDeviceMemory devmem_local = VK_NULL_HANDLE;
-	uint64_t devmem_local_offset = 0;
 	VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 	VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 	VkDescriptorSetLayout descriptor_set_layout_srv = VK_NULL_HANDLE;
@@ -123,6 +123,7 @@ struct vkcontext_t {
 	std::vector<VkPipeline> vgp_draw_rects;
 	std::vector<frame_info_t> frame_infos;
 
+	uint64_t devmem_local_offset = 0;
 	uint64_t backbuffer_index = 0;
 	uint64_t frame_count = 0;
 
