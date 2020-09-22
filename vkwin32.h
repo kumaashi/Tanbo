@@ -386,7 +386,7 @@ create_swapchain(
 inline void
 submit_command(
 	VkDevice device,
-	VkCommandBuffer cmdbuf,
+	std::vector<VkCommandBuffer> vcmdbuf,
 	VkQueue queue,
 	VkFence fence,
 	VkSemaphore sem)
@@ -398,11 +398,11 @@ submit_command(
 	VkSemaphore waitSemaphores[] = { sem };
 
 	info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	info.waitSemaphoreCount = 1;
 	info.pWaitDstStageMask = wait_mask;
-	info.commandBufferCount = 1;
+	info.waitSemaphoreCount = 1;
 	info.pWaitSemaphores = waitSemaphores;
-	info.pCommandBuffers = &cmdbuf;
+	info.pCommandBuffers = vcmdbuf.data();
+	info.commandBufferCount = vcmdbuf.size();
 	info.signalSemaphoreCount = 0;
 
 	vkResetFences(device, 1, &fence);

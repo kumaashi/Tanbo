@@ -97,6 +97,19 @@ struct vkcontext_t {
 		};
 		std::vector<layer_t> layers;
 	};
+	
+	struct user_image_t {
+		VkImageCreateInfo info;
+		VkImage image = VK_NULL_HANDLE;
+		VkImageView image_view = VK_NULL_HANDLE;
+	};
+	std::vector<user_image_t> vuser_images;
+	void upload_user_image(uint32_t slot, uint32_t width, uint32_t height, void *dword_data) {
+		user_image_t uimg = {};
+		auto image_usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		uimg.image = create_image(device, width, height, VK_FORMAT_R8G8B8A8_UNORM, image_usage_flags, &uimg.info);
+		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
 
 	uint32_t graphics_queue_family_index = -1;
 	uint32_t gpu_count = 0;
@@ -339,7 +352,7 @@ struct vkcontext_t {
 		if (err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
 			printf("VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT\n");
 
-		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
+		submit_command(device, {ref.cmdbuf}, graphics_queue, ref.fence, ref.sem);
 		present_surface(graphics_queue, swapchain, present_index);
 
 		frame_count++;
