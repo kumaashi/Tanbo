@@ -801,15 +801,7 @@ create_gpipeline(
 	VkPipelineColorBlendAttachmentState att_state[1] = {};
 	att_state[0].colorWriteMask = 0xf;
 	att_state[0].blendEnable = VK_TRUE;
-
-	//att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-	//att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;        //
-	////VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
-	//att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
-	//att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	//att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
-
 	att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
