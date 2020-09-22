@@ -72,7 +72,7 @@ struct vkcontext_t {
 
 		VkDescriptorSet descriptor_set_cbv = VK_NULL_HANDLE;
 		VkDescriptorSet descriptor_set_srv = VK_NULL_HANDLE;
-		
+
 		VkDeviceMemory devmem_host = VK_NULL_HANDLE;
 		VkDeviceMemory devmem_local_vertex = VK_NULL_HANDLE;
 
@@ -124,8 +124,9 @@ struct vkcontext_t {
 	VkPipeline cp_update_buffer = VK_NULL_HANDLE;
 	std::vector<VkPipeline> vgp_draw_rects;
 	std::vector<frame_infos_t> frame_infos;
-	
-	void init(create_info & info) {
+
+	void init(create_info & info)
+	{
 		frame_infos.resize(info.FrameFifoMax);
 		VkInstance inst = create_instance(info.appname);
 		auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
@@ -191,7 +192,7 @@ struct vkcontext_t {
 			vkBindBufferMemory(device, ref.indirect_draw_cmd_buffer, ref.devmem_host_draw_indirect_cmd, 0);
 			vkMapMemory(device, ref.devmem_host, 0, info.LayerMax * info.ObjectMaxBytes, 0, (void **)&temp_addr);
 			vkMapMemory(device, ref.devmem_host_draw_indirect_cmd, 0, info.DrawIndirectCommandSize, 0, (void **)&ref.host_draw_indirect_cmd);
-			
+
 			auto image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			ref.descriptor_set_srv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_SRV]);
 			ref.descriptor_set_cbv = create_descriptor_set(device, descriptor_pool, vdescriptor_layouts[RDT_SLOT_CBV]);
@@ -260,8 +261,9 @@ struct vkcontext_t {
 			vkEndCommandBuffer(ref.cmdbuf);
 		}
 	}
-	
-	void submit(uint32_t index) {
+
+	void submit(uint32_t index)
+	{
 		auto & ref = frame_infos[index];
 		vkWaitForFences(device, 1, &ref.fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &ref.fence);

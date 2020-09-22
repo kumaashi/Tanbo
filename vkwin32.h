@@ -849,7 +849,7 @@ create_gpipeline(
 
 	if (!vs.empty()) {
 		auto module = create_shader_module(
-			device, vs.data(), vs.size());
+				device, vs.data(), vs.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		sstage.module = module;
@@ -857,7 +857,7 @@ create_gpipeline(
 	}
 	if (!ps.empty()) {
 		auto module = create_shader_module(
-			device, ps.data(), ps.size());
+				device, ps.data(), ps.size());
 		vshadermodules.push_back(module);
 		sstage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		sstage.module = module;
@@ -903,7 +903,7 @@ create_gpipeline(
 	info.pDynamicState = &dyns;
 	info.renderPass = render_pass;
 	auto pipeline_result = vkCreateGraphicsPipelines(
-		device, nullptr, 1, &info, NULL, &ret);
+			device, nullptr, 1, &info, NULL, &ret);
 	for (auto & module : vshadermodules)
 		if (module)
 			vkDestroyShaderModule(device, module, nullptr);

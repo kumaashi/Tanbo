@@ -210,7 +210,7 @@ main(int argc, char *argv[])
 	compile_glsl2spirv(shaderpath + "draw_rect.glsl", "_PS_", shader_draw_rect.ps);
 	compile_glsl2spirv(shaderpath + "present.glsl", "_VS_", shader_present.vs);
 	compile_glsl2spirv(shaderpath + "present.glsl", "_PS_", shader_present.ps);
-	for(int i = 0 ; i < cinfo.LayerMax - 1; i++)
+	for (int i = 0 ; i < cinfo.LayerMax - 1; i++)
 		cinfo.shader_layers.push_back(shader_draw_rect);
 	cinfo.shader_layers.push_back(shader_present);
 
