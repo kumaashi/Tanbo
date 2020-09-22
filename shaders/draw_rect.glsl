@@ -52,7 +52,8 @@ layout(location=2) in vec4 v_color;
 layout(location=0) out vec4 out_color;
 
 void main(){
-	float rr = length(v_uv);
+	vec2 uv = v_uv * 2.0 - 1.0;
+	float rr = length(uv);
 	float k = (1.0 / rr) - 1.0;
 	out_color = v_color * k * 0.1;
 }

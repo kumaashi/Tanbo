@@ -35,7 +35,8 @@ struct vkcontext_t {
 		float scale[4];
 		float rotate[4];
 		float color[4];
-		uint32_t metadata[16];
+		float uvinfo[4];
+		uint32_t metadata[4];
 	};
 
 	struct create_info {
@@ -170,7 +171,8 @@ struct vkcontext_t {
 		create_resources();
 	}
 
-	void create_resources() {
+	void create_resources()
+	{
 		cmd_pool = create_cmd_pool(device, graphics_queue_family_index);
 		swapchain = create_swapchain(device, surface, info.ScreenW, info.ScreenH, info.FrameFifoMax);
 		sampler = create_sampler(device, true);

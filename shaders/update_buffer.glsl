@@ -27,7 +27,8 @@ struct object_data {
 	vec4 scale;
 	vec4 rotate;
 	vec4 color;
-	uint metadata[16];
+	vec4 uvinfo;
+	uint metadata[4];
 };
 
 struct vertex_format {
@@ -63,15 +64,20 @@ void main()
 	vec4 pos = obj[tid].pos;
 	vec4 scale = obj[tid].scale;
 	vec4 color = obj[tid].color;
+	vec4 uvinfo = obj[tid].uvinfo;
 	float rotvalue = obj[tid].rotate.x;
 
 	vec2 basepos[4];
 	vec2 baseuv[4];
 
-	baseuv[0] = vec2(-1, -1);
-	baseuv[1] = vec2(-1,  1);
-	baseuv[2] = vec2( 1, -1);
-	baseuv[3] = vec2( 1,  1);
+	vec2 uv_div = uvinfo.zw;
+	vec2 uv_unit = 1.0 / uv_div;
+	vec2 uv_offset = uv_unit * uvinfo.xy;
+
+	baseuv[0] = (vec2( 0,  0) / uv_div) + uv_offset;
+	baseuv[1] = (vec2( 0,  1) / uv_div) + uv_offset;
+	baseuv[2] = (vec2( 1,  0) / uv_div) + uv_offset;
+	baseuv[3] = (vec2( 1,  1) / uv_div) + uv_offset;
 
 	//scale
 	basepos[0] = vec2(-1, -1) * scale.xy;

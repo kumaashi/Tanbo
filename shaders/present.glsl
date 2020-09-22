@@ -52,15 +52,11 @@ layout(location=2) in vec4 v_color;
 layout(location=0) out vec4 out_color;
 
 void main(){
-	vec2 uv = v_uv * 0.5 + 0.5;
+	vec2 uv = v_uv;
 	out_color.xyz = vec3(0.0);
 	out_color.xyz += texture(tex[0], uv).xyz;
 	out_color.xyz += texture(tex[1], uv).xyz;
 	out_color.xyz += texture(tex[2], uv).xyz;
-	out_color.xyz += texture(tex[3], uv).xyz;
-	out_color.xyz += texture(tex[4], uv).xyz;
-	out_color.xyz += texture(tex[5], uv).xyz;
-	out_color.xyz += texture(tex[6], uv).xyz;
 	out_color.xyz = clamp(vec3(1.0) - out_color.xyz, vec3(0.0), vec3(1.0));
 	out_color.a = 1.0;
 }
