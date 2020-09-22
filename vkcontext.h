@@ -64,7 +64,7 @@ struct vkcontext_t {
 		std::vector<shader_layer_t> shader_layers;
 	};
 
-	struct frame_infos_t {
+	struct frame_info_t {
 		VkImage backbuffer_image = VK_NULL_HANDLE;
 		VkCommandBuffer cmdbuf = VK_NULL_HANDLE;
 		VkSemaphore sem = VK_NULL_HANDLE;
@@ -123,7 +123,7 @@ struct vkcontext_t {
 	VkRenderPass render_pass = VK_NULL_HANDLE;
 	VkPipeline cp_update_buffer = VK_NULL_HANDLE;
 	std::vector<VkPipeline> vgp_draw_rects;
-	std::vector<frame_infos_t> frame_infos;
+	std::vector<frame_info_t> frame_infos;
 
 	void init(create_info & info)
 	{
@@ -132,6 +132,27 @@ struct vkcontext_t {
 		auto err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
 		err = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpudev);
 		vkGetPhysicalDeviceProperties(gpudev, &gpu_props);
+		{
+			VkPhysicalDeviceProperties gpu_props = {};
+			VkPhysicalDevice enum_gpudev = VK_NULL_HANDLE;
+			for (uint32_t i = 0 ; i < gpu_count; i++) {
+				err = vkEnumeratePhysicalDevices(inst, &i, &gpudev);
+				vkGetPhysicalDeviceProperties(gpudev, &gpu_props);
+				printf("apiVersion:0x%08X\n", gpu_props.apiVersion);
+				printf("driverVersion:0x%08X\n", gpu_props.driverVersion);
+				printf("vendorID:0x%08X\n", gpu_props.vendorID);
+				printf("deviceID:0x%08X\n", gpu_props.deviceID);
+				printf("deviceName:");
+
+				for (auto & c : gpu_props.deviceName) {
+					if (isgraph(c))
+						printf("%c", c);
+					else
+						printf(" ", c);
+				}
+				printf("\n");
+			}
+		}
 
 		surface = create_win32_surface(inst, info.hwnd, GetModuleHandle(NULL));
 		vkGetPhysicalDeviceSurfaceSupportKHR(gpudev, 0, surface, &presentSupport);
@@ -271,17 +292,17 @@ struct vkcontext_t {
 		uint32_t present_index = 0;
 
 		auto err = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, ref.sem, VK_NULL_HANDLE, &present_index);
-		if(err == VK_ERROR_OUT_OF_HOST_MEMORY)
+		if (err == VK_ERROR_OUT_OF_HOST_MEMORY)
 			printf("VK_ERROR_OUT_OF_HOST_MEMORY\n");
-		if(err == VK_ERROR_OUT_OF_DEVICE_MEMORY)
+		if (err == VK_ERROR_OUT_OF_DEVICE_MEMORY)
 			printf("VK_ERROR_OUT_OF_DEVICE_MEMORY\n");
-		if(err == VK_ERROR_DEVICE_LOST)
+		if (err == VK_ERROR_DEVICE_LOST)
 			printf("VK_ERROR_DEVICE_LOST\n");
-		if(err == VK_ERROR_OUT_OF_DATE_KHR) {
+		if (err == VK_ERROR_OUT_OF_DATE_KHR)
 			printf("VK_ERROR_OUT_OF_DATE_KHR\n");
-		if(err == VK_ERROR_SURFACE_LOST_KHR)
+		if (err == VK_ERROR_SURFACE_LOST_KHR)
 			printf("VK_ERROR_SURFACE_LOST_KHR\n");
-		if(err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+		if (err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
 			printf("VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT\n");
 
 		submit_command(device, ref.cmdbuf, graphics_queue, ref.fence, ref.sem);
