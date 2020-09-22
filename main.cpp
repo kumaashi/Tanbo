@@ -215,9 +215,7 @@ main(int argc, char *argv[])
 	cinfo.hinst = GetModuleHandle(NULL);
 	ctx.init(cinfo);
 
-	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	printf("START\n");
-	printf("=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====8<=====\n");
 	uint64_t frame_count = 0;
 	double phase = 0.0;
 	while (window_update()) {
