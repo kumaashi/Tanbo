@@ -251,7 +251,7 @@ main(int argc, char *argv[])
 				p->metadata[0] = 1;
 				p->pos[0] = cos(3 * cos(123.0f * frandom() + frandom() * phase * 2.0 * 0.05));
 				p->pos[1] = cos(3 * sin(456.0f * frandom() + frandom() * phase * 3.0 * 0.05));
-				p->scale[0] = 0.005 + frand() * 0.05;
+				p->scale[0] = 0.1 + frand() * 0.05;
 				p->scale[1] = 0.001 + frand() * 0.05;
 				p->rotate[0] = frandom() * 10.0 + phase * 5.0;
 				p->color[0] = frand();
