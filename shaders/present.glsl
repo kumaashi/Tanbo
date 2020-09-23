@@ -23,7 +23,8 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(set=0, binding=0) uniform sampler2D tex[];
-layout(set=0, binding=1) uniform sampler2D tex_user[];
+layout(set=0, binding=1) uniform sampler2D prev_tex[];
+layout(set=0, binding=2) uniform sampler2D tex_user[];
 
 #ifdef _VS_
 layout(location=0) in vec4 position;
@@ -55,12 +56,12 @@ layout(location=0) out vec4 out_color;
 void main(){
 	vec2 uv = v_uv;
 	out_color.xyz = vec3(0.0);
-	out_color.xyz += texture(tex[0], uv).xyz;
-	out_color.xyz += texture(tex[1], uv).xyz;
-	out_color.xyz += texture(tex[2], uv).xyz;
-	out_color.xyz += texture(tex_user[0], uv).xyz;
-	
-	out_color.xyz = clamp(vec3(1.0) - out_color.xyz, vec3(0.0), vec3(1.0));
+	out_color.xyz += texture(tex[0], uv).xyz * 0.3;
+	out_color.xyz += texture(tex[1], uv).xyz * 0.3;
+	out_color.xyz += texture(tex[2], uv).xyz * 0.3;
+	out_color.xyz += texture(tex_user[0], uv).xyz * 0.1;
+	out_color.xyz += mix(out_color.xyz, texture(prev_tex[3], uv).xyz, 0.9);
+	//out_color.xyz = clamp(vec3(1.0) - out_color.xyz, vec3(0.0), vec3(1.0));
 	out_color.a = 1.0;
 }
 #endif //_PS_

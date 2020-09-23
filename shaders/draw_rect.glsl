@@ -23,7 +23,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(set=0, binding=0) uniform sampler2D tex[];
-layout(set=0, binding=1) uniform sampler2D tex_user[];
+layout(set=0, binding=2) uniform sampler2D tex_user[];
 
 #ifdef _VS_
 layout(location=0) in vec4 position;

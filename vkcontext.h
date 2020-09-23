@@ -124,7 +124,7 @@ struct vkcontext_t {
 		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 		for (int i = 0 ; i < info.FrameFifoMax; i++) {
 			auto & ref = vframe_infos[i];
-			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 1, slot, uimg.image_view, sampler);
+			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 2, slot, uimg.image_view, sampler);
 		}
 
 		map_and_copy_devmem(device, uimg.devmem_buffer, 0, size, src);
@@ -247,7 +247,8 @@ struct vkcontext_t {
 			std::vector<VkDescriptorSetLayoutBinding> vdesc_setlayout_binding_uav;
 			VkShaderStageFlags shader_stages = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
 			vdesc_setlayout_binding_srv.push_back({0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.LayerMax, shader_stages, nullptr});
-			vdesc_setlayout_binding_srv.push_back({1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.UserImageMax, shader_stages, nullptr});
+			vdesc_setlayout_binding_srv.push_back({1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.LayerMax, shader_stages, nullptr});
+			vdesc_setlayout_binding_srv.push_back({2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info.UserImageMax, shader_stages, nullptr});
 			vdesc_setlayout_binding_cbv.push_back({0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, info.DescriptorArrayMax, shader_stages, nullptr});
 			vdesc_setlayout_binding_uav.push_back({0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
 			vdesc_setlayout_binding_uav.push_back({1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, shader_stages, nullptr});
@@ -311,6 +312,15 @@ struct vkcontext_t {
 				update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 0, layer_num, layer.image_view, sampler);
 				update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 0, 0, layer.buffer, info.ObjectMaxBytes);
 				update_descriptor_storage_buffer(device, layer.descriptor_set_uav, 1, 0, layer.vertex_buffer, info.VertexMaxBytes);
+			}
+		}
+		for (int i = 0 ; i < info.FrameFifoMax; i++) {
+			auto & ref = vframe_infos[i];
+			auto & prev_ref = vframe_infos[(i - 1) % info.FrameFifoMax];
+			for (uint32_t layer_num = 0 ; layer_num < ref.layers.size(); layer_num++) {
+				auto & layer = ref.layers[layer_num];
+				auto & prev_layer = prev_ref.layers[layer_num];
+				update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 1, layer_num, prev_layer.image_view, sampler);
 			}
 		}
 	}
