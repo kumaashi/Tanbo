@@ -241,13 +241,11 @@ main(int argc, char *argv[])
 		if(GetAsyncKeyState(VK_UP) & 0x0001) {
 			tex_id++;
 		}
-		
 		phase += 0.01;
 		srand(0);
-		auto ObjectCount = 8192;
 		for (int i = 0 ; i < cinfo.LayerMax - 1; i++) {
 			auto p = ctx.get_object_format_address(i);
-			for (int i = 0 ; i < ObjectCount; i++) {
+			for (int i = 0 ; i < ObjectMax; i++) {
 				p->metadata[0] = 1;
 				p->pos[0] = cos(3 * cos(123.0f * frandom() + frandom() * phase * 2.0 * 0.05));
 				p->pos[1] = cos(3 * sin(456.0f * frandom() + frandom() * phase * 3.0 * 0.05));
@@ -274,7 +272,7 @@ main(int argc, char *argv[])
 				
 				p++;
 			}
-			ctx.draw_triangles(i, ObjectCount * 6);
+			ctx.draw_triangles(i, ObjectMax * 6);
 		}
 		auto last_index = cinfo.LayerMax - 1;
 		auto p = ctx.get_object_format_address(last_index);
