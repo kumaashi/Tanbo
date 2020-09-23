@@ -65,7 +65,8 @@ VKAPI_CALL vk_callback_printf(
 		printf("DEBUG : ");
 	printf("%s", pMessage);
 	printf("\n");
-	return VK_FALSE;
+
+	return (VK_FALSE);
 }
 
 VkDebugReportCallbackEXT
@@ -167,6 +168,7 @@ create_device(VkPhysicalDevice gpudev, uint32_t graphics_queue_family_index)
 	device_info.enabledExtensionCount = (uint32_t)_countof(ext_names);
 	device_info.ppEnabledExtensionNames = ext_names;
 	auto err = vkCreateDevice(gpudev, &device_info, NULL, &ret);
+
 	return (ret);
 }
 
@@ -186,6 +188,7 @@ get_graphics_queue_index(VkPhysicalDevice gpudev)
 			break;
 		}
 	}
+
 	return (ret);
 }
 
@@ -198,6 +201,7 @@ get_buffer_memreq_size(VkDevice device, VkBuffer buffer)
 	vkGetBufferMemoryRequirements(device, buffer, &memreqs);
 	memreqs.size = memreqs.size + (memreqs.alignment - 1);
 	memreqs.size &= ~(memreqs.alignment - 1);
+
 	return (memreqs.size);
 }
 
@@ -210,6 +214,7 @@ get_image_memreq_size(VkDevice device, VkImage image)
 	vkGetImageMemoryRequirements(device, image, &memreqs);
 	memreqs.size = memreqs.size + (memreqs.alignment - 1);
 	memreqs.size &= ~(memreqs.alignment - 1);
+
 	return (memreqs.size);
 }
 
@@ -306,6 +311,7 @@ alloc_device_memory(
 		}
 	}
 	vkAllocateMemory(device, &ma_info, nullptr, &ret);
+
 	return (ret);
 };
 
@@ -318,6 +324,7 @@ create_semaphore(VkDevice device)
 
 	info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	vkCreateSemaphore(device, &info, nullptr, &ret);
+
 	return (ret);
 }
 
@@ -347,6 +354,7 @@ create_win32_surface(VkInstance inst, HWND hwnd, HINSTANCE hinst)
 	info.hinstance = hinst;
 	info.hwnd = hwnd;
 	vkCreateWin32SurfaceKHR(inst, &info, NULL, &ret);
+
 	return (ret);
 }
 
@@ -380,6 +388,7 @@ create_swapchain(
 
 	info.clipped = VK_TRUE;
 	vkCreateSwapchainKHR(device, &info, nullptr, &ret);
+
 	return (ret);
 }
 
@@ -514,6 +523,7 @@ create_image(
 	vkCreateImage(device, &info, NULL, &ret);
 	if (ret && pinfo)
 		*pinfo = info;
+
 	return (ret);
 }
 
@@ -541,6 +551,7 @@ create_image_view(
 	info.subresourceRange.levelCount = 1;
 	info.subresourceRange.layerCount = 1;
 	vkCreateImageView(device, &info, NULL, &ret);
+
 	return (ret);
 }
 
