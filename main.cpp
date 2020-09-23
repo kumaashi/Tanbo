@@ -233,19 +233,19 @@ main(int argc, char *argv[])
 	double phase = 0.0;
 	static int tex_id = 20;
 	while (window_update()) {
-		if(GetAsyncKeyState(VK_DOWN) & 0x0001) {
+		if (GetAsyncKeyState(VK_DOWN) & 0x0001) {
 			tex_id--;
-			if(tex_id < 0)
+			if (tex_id < 0)
 				tex_id = 0;
 		}
-		if(GetAsyncKeyState(VK_UP) & 0x0001) {
+		if (GetAsyncKeyState(VK_UP) & 0x0001) {
 			tex_id++;
 		}
 		phase += 0.01;
 		srand(0);
 		for (int i = 0 ; i < cinfo.LayerMax - 1; i++) {
 			auto p = ctx.get_object_format_address(i);
-			for (int i = 0 ; i < ObjectMax; i++) {
+			for (int i = 0 ; i < cinfo.ObjectMax; i++) {
 				p->metadata[0] = 1;
 				p->pos[0] = cos(3 * cos(123.0f * frandom() + frandom() * phase * 2.0 * 0.05));
 				p->pos[1] = cos(3 * sin(456.0f * frandom() + frandom() * phase * 3.0 * 0.05));
@@ -256,23 +256,23 @@ main(int argc, char *argv[])
 				p->color[1] = frand();
 				p->color[2] = frand();
 				p->color[3] = 1.0;
-				
+
 				//for test 8x8 tex
 				p->uvinfo[0] = tex_id % 8;
 				p->uvinfo[1] = tex_id / 8;
 				p->uvinfo[2] = 8;
 				p->uvinfo[3] = 8;
-				
+
 				//all
 				p->uvinfo[0] = 0;
 				p->uvinfo[1] = 0;
 				p->uvinfo[2] = 1;
 				p->uvinfo[3] = 1;
-				
-				
+
+
 				p++;
 			}
-			ctx.draw_triangles(i, ObjectMax * 6);
+			ctx.draw_triangles(i, cinfo.ObjectMax * 6);
 		}
 		auto last_index = cinfo.LayerMax - 1;
 		auto p = ctx.get_object_format_address(last_index);
