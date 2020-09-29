@@ -162,7 +162,12 @@ create_device(VkPhysicalDevice gpudev, uint32_t graphics_queue_family_index)
 	queue_info.queueCount = 1;
 	queue_info.pQueuePriorities = queue_priorities;
 
+	VkPhysicalDeviceDescriptorIndexingFeatures difeatures = {};
+	difeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	difeatures.runtimeDescriptorArray = VK_TRUE;
+
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	device_info.pNext = &difeatures;
 	device_info.queueCreateInfoCount = 1;
 	device_info.pQueueCreateInfos = &queue_info;
 	device_info.enabledExtensionCount = (uint32_t)_countof(ext_names);
