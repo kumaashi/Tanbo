@@ -112,16 +112,16 @@ struct vkcontext_t {
 
 	void upload_user_image(uint32_t slot, uint32_t width, uint32_t height, void *src)
 	{
-		VkDeviceSize size = width * height * sizeof(uint32_t);
 		user_image_t uimg = {};
 		uimg.image = create_image(device, width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &uimg.info);
+		VkDeviceSize size = get_image_memreq_size(device, uimg.image);
 		uimg.buffer = create_buffer(device, size);
 		uimg.devmem_image = alloc_device_memory(gpudev, device, size, false);
 		uimg.devmem_buffer = alloc_device_memory(gpudev, device, size, true);
 		vkBindImageMemory(device, uimg.image, uimg.devmem_image, 0);
 		vkBindBufferMemory(device, uimg.buffer, uimg.devmem_buffer, 0);
 
-		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+		uimg.image_view = create_image_view(device, uimg.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 		for (int i = 0 ; i < info.FrameFifoMax; i++) {
 			auto & ref = vframe_infos[i];
 			update_descriptor_combined_image_sample(device, ref.descriptor_set_srv, 2, slot, uimg.image_view, sampler);
