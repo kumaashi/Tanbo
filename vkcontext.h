@@ -28,6 +28,8 @@ struct vkcontext_t {
 		float pos[4];
 		float uv[4];
 		float color[4];
+		uint32_t matid;
+		uint32_t reserved[3];
 	};
 
 	struct object_format {

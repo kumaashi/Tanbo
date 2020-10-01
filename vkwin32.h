@@ -883,6 +883,8 @@ create_gpipeline(
 	stride_size += sizeof(float) * 4;
 	via_desc.push_back({2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, stride_size});
 	stride_size += sizeof(float) * 4;
+	via_desc.push_back({3, 0, VK_FORMAT_R32G32B32A32_UINT , stride_size});
+	stride_size += sizeof(uint32_t) * 4;
 
 	ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;

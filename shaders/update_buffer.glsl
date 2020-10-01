@@ -35,13 +35,15 @@ struct vertex_format {
 	vec4 pos;
 	vec4 uv;
 	vec4 color;
+	uint matid;
+	uint reserved[3];
 };
 
-layout(set=2, binding=0) buffer obj_t {
+layout(std430, set=2, binding=0) buffer obj_t {
 	object_data obj[];
 };
 
-layout(set=2, binding=1) buffer vtx_t {
+layout(std430, set=2, binding=1) buffer vtx_t {
 	vertex_format vtx[];
 };
 
@@ -66,6 +68,7 @@ void main()
 	vec4 color = obj[tid].color;
 	vec4 uvinfo = obj[tid].uvinfo;
 	float rotvalue = obj[tid].rotate.x;
+	uint matid = obj[tid].metadata[1];
 
 	vec2 basepos[4];
 	vec2 baseuv[4];
@@ -121,4 +124,12 @@ void main()
 	vtx[tid * 6 + 3].color = color;
 	vtx[tid * 6 + 4].color = color;
 	vtx[tid * 6 + 5].color = color;
+	
+	//matid
+	vtx[tid * 6 + 0].matid = matid;
+	vtx[tid * 6 + 1].matid = matid;
+	vtx[tid * 6 + 2].matid = matid;
+	vtx[tid * 6 + 3].matid = matid;
+	vtx[tid * 6 + 4].matid = matid;
+	vtx[tid * 6 + 5].matid = matid;
 }

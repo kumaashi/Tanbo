@@ -29,16 +29,19 @@ layout(set=0, binding=2) uniform sampler2D tex_user[];
 layout(location=0) in vec4 position;
 layout(location=1) in vec4 uv;
 layout(location=2) in vec4 color;
+layout(location=3) in uint matid;
 
 layout(location=0) out vec4 v_pos;
 layout(location=1) out vec2 v_uv;
 layout(location=2) out vec4 v_color;
+layout(location=3) flat out uint v_matid;
 
 void main()
 {
 	v_pos = vec4(position.xyz, 1.0);
 	v_uv = uv.xy;
 	v_color = color;
+	v_matid = matid;
 	gl_Position = v_pos;
 }
 #endif //_VS_
@@ -49,14 +52,13 @@ void main()
 layout(location=0) in vec4 v_pos;
 layout(location=1) in vec2 v_uv;
 layout(location=2) in vec4 v_color;
+layout(location=3) flat in uint v_matid;
 
 layout(location=0) out vec4 out_color;
 
 void main(){
-	vec2 uv = v_uv * 2.0 - 1.0;
-	float rr = length(uv);
-	float k = (1.0 / rr) - 1.0;
-	out_color = v_color * k * 0.1;
-	//out_color.xyz += texture(tex_user[0], v_uv).xyz;
+	out_color = texture(tex_user[v_matid], v_uv);
+	out_color.a = 1.0;
+	out_color *= v_color;
 }
 #endif //_PS_
