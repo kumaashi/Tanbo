@@ -172,6 +172,15 @@ window_update()
 	return is_active;
 }
 
+static void
+compile_glsl2spirv_ex(
+	std::string name,
+	vkcontext_t::create_info::shader_layer_t & shader)
+{
+	compile_glsl2spirv(name, "_VS_", shader.vs);
+	compile_glsl2spirv(name, "_PS_", shader.ps);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -203,10 +212,8 @@ main(int argc, char *argv[])
 
 	std::string shaderpath = "./shaders/";
 	compile_glsl2spirv(shaderpath + "update_buffer.glsl", "_CS_", cinfo.cs_update);
-	compile_glsl2spirv(shaderpath + "draw_rect.glsl", "_VS_", shader_draw_rect.vs);
-	compile_glsl2spirv(shaderpath + "draw_rect.glsl", "_PS_", shader_draw_rect.ps);
-	compile_glsl2spirv(shaderpath + "present.glsl", "_VS_", shader_present.vs);
-	compile_glsl2spirv(shaderpath + "present.glsl", "_PS_", shader_present.ps);
+	compile_glsl2spirv_ex(shaderpath + "draw_rect.glsl", shader_draw_rect);
+	compile_glsl2spirv_ex(shaderpath + "present.glsl", shader_present);
 	for (int i = 0 ; i < cinfo.LayerMax - 1; i++)
 		cinfo.shader_layers.push_back(shader_draw_rect);
 	cinfo.shader_layers.push_back(shader_present);
